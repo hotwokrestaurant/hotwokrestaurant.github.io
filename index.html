@@ -5,17 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hot Wok Restaurant – Menu</title>
   <meta name="description" content="Menu of Hot Wok Restaurant: fried rice, kottu, noodles, devilled dishes, soups and beverages.">
-  <meta name="theme-color" content="#b3121b">
+  <meta name="theme-color" content="#0b0b0b">
+  <meta name="color-scheme" content="dark">
+
+  <!-- Montserrat (weights 500, 600, 800). "preconnect" opens the connection early;
+       "display=swap" shows the system font straight away, then swaps when loaded. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap">
+
   <link rel="stylesheet" href="css/style.css">
   <script type="module" src="js/menu.js"></script>
 </head>
 <body>
+  <!-- Icon set: drawn once here, reused anywhere with <use href="#icon-…">. -->
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-flame" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 2.5c.4 2.9-1 4.6-2.6 6.3C7.8 10.5 6.5 12.3 6.5 15a5.5 5.5 0 0 0 11 0c0-2.2-.9-3.9-2.2-5.3-.3 1.3-1 2.3-2.1 2.8.5-3.4-.3-7-1.2-10Z"/>
+    </symbol>
+    <symbol id="icon-leaf" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M20 4c-7.5 0-13 3.6-13 10.2 0 1.4.4 2.6 1 3.6l-2.7 2.5 1.4 1.4 2.7-2.7c1 .6 2.2 1 3.6 1C19.6 20 20 11.5 20 4Z"/>
+    </symbol>
+    <symbol id="icon-star" viewBox="0 0 24 24">
+      <path fill="currentColor" d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5l-5.4 3 1.2-6-4.5-4.2 6.1-.7Z"/>
+    </symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="6.5"/>
+        <path d="M16 16l4.5 4.5"/>
+      </g>
+    </symbol>
+    <symbol id="icon-arrow-up" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>
+    </symbol>
+  </svg>
+
   <a class="skip-link" href="#menu">Skip to menu</a>
 
   <header class="site-header">
-    <h1 id="restaurant-name" class="site-header__name">Hot Wok Restaurant</h1>
-    <p id="tagline" class="site-header__tagline"></p>
+    <!-- The logo IS the page title. logo.webp is the wordmark cropped from logo.jpg
+         at full resolution (464×180), shown at 232px wide = sharp on 2× screens. -->
+    <h1 class="site-header__logo">
+      <img id="logo" src="images/logo.webp" alt="Hot Wok Restaurant" width="464" height="180" fetchpriority="high">
+    </h1>
+    <p id="tagline" class="site-header__tagline" hidden></p>
     <p id="notice" class="notice" hidden></p>
+
+    <div class="search">
+      <label for="search-input" class="visually-hidden">Search dishes</label>
+      <svg class="search__icon" aria-hidden="true" focusable="false"><use href="#icon-search"/></svg>
+      <input id="search-input" class="search__input" type="search"
+             placeholder="Search dishes" autocomplete="off" enterkeyhint="search">
+    </div>
+
+    <!-- Key for the small icons next to dish names, like on a printed menu. -->
+    <ul class="legend" aria-label="Icon key">
+      <li class="legend__item">
+        <svg class="icon icon--spicy" aria-hidden="true" focusable="false"><use href="#icon-flame"/></svg>Spicy
+      </li>
+      <li class="legend__item">
+        <svg class="icon icon--veg" aria-hidden="true" focusable="false"><use href="#icon-leaf"/></svg>Vegetarian
+      </li>
+      <li class="legend__item">
+        <svg class="icon icon--featured" aria-hidden="true" focusable="false"><use href="#icon-star"/></svg>Chef's special
+      </li>
+    </ul>
   </header>
 
   <!-- Sticky category tabs. Filled in by js/menu.js -->
@@ -23,20 +77,14 @@
     <ul id="category-tabs" class="category-tabs__list"></ul>
   </nav>
 
-  <div class="search">
-    <label for="search-input" class="visually-hidden">Search dishes</label>
-    <input id="search-input" class="search__input" type="search"
-           placeholder="Search dishes…" autocomplete="off" enterkeyhint="search">
-  </div>
-
   <main id="menu" class="menu" aria-busy="true">
-    <!-- Skeleton loader: grey placeholder cards shown until the menu is ready -->
+    <!-- Skeleton loader: faint placeholder rows shown until the menu is ready -->
     <div id="menu-sections">
       <div class="skeleton" aria-hidden="true">
         <div class="skeleton__title"></div>
-        <div class="skeleton__card"></div>
-        <div class="skeleton__card"></div>
-        <div class="skeleton__card"></div>
+        <div class="skeleton__row"></div>
+        <div class="skeleton__row"></div>
+        <div class="skeleton__row"></div>
       </div>
       <p class="visually-hidden">Loading menu…</p>
     </div>
@@ -48,20 +96,23 @@
       <h2 class="site-footer__heading">Opening hours</h2>
       <p id="opening-hours"></p>
     </div>
-    <p id="address" class="site-footer__address" hidden></p>
+    <div id="address-block" class="site-footer__block" hidden>
+      <h2 class="site-footer__heading">Find us</h2>
+      <p id="address"></p>
+    </div>
     <div class="site-footer__actions">
-      <a id="call-button" class="button button--primary" href="#" hidden>
-        <span aria-hidden="true">📞</span> <span id="call-label">Call us</span>
+      <a id="call-button" class="button" href="#" hidden>
+        <span id="call-label">Call us</span>
       </a>
-      <a id="map-link" class="button button--secondary" href="#" target="_blank" rel="noopener" hidden>
-        <span aria-hidden="true">📍</span> Open in Google Maps
-      </a>
+      <a id="map-link" class="text-link" href="#" target="_blank" rel="noopener" hidden>Directions</a>
     </div>
     <p class="site-footer__small">Prices may change without notice.</p>
     <p class="site-footer__small">Digital menu by Janana</p>
   </footer>
 
-  <button id="back-to-top" class="back-to-top" type="button" aria-label="Back to top" hidden>↑</button>
+  <button id="back-to-top" class="back-to-top" type="button" aria-label="Back to top" hidden>
+    <svg aria-hidden="true" focusable="false"><use href="#icon-arrow-up"/></svg>
+  </button>
 
   <noscript>
     <p class="noscript">Please turn on JavaScript to see the menu, or ask our staff for a printed menu.</p>

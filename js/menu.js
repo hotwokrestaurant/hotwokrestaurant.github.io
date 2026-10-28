@@ -41,10 +41,14 @@ function prepareMenu(data) {
 
 function renderHeader(settings) {
   if (settings.restaurant_name) {
-    document.getElementById('restaurant-name').textContent = settings.restaurant_name;
+    // The logo image is the page title, so its alt text carries the name.
+    document.getElementById('logo').alt = settings.restaurant_name;
     document.title = `${settings.restaurant_name} – Menu`;
   }
-  document.getElementById('tagline').textContent = settings.tagline || '';
+
+  const tagline = document.getElementById('tagline');
+  tagline.textContent = settings.tagline || '';
+  tagline.hidden = !settings.tagline;
 
   const notice = document.getElementById('notice');
   notice.textContent = settings.notice || '';
@@ -71,6 +75,8 @@ function renderSections(groups) {
 
   groups.forEach((group, index) => {
     const section = createElement('section', 'menu-section');
+    // If any dish here has a photo, every row keeps a photo column so names line up.
+    section.classList.toggle('menu-section--with-photos', group.items.some(hasPhoto));
     section.id = `cat-${index}`;
     section.tabIndex = -1; // lets us move keyboard focus here after a tab click
 
@@ -90,20 +96,31 @@ function createDishCard(item) {
   // Text used by the search box (name + description, lower-case).
   card.dataset.search = normalizeText(`${item.name} ${item.description || ''}`);
 
+  // Top line: name (+ icons) on the left, price on the right.
+  const name = createElement('h3', 'dish__name', item.name);
+  const icons = createDishIcons(item);
+  if (icons) name.append(icons);
+
+  const header = createElement('div', 'dish__header');
+  header.append(name);
+  const price = createPrice(item);
+  if (price) header.append(price);
+
+  // Marks Regular/Large rows; in categories with photos the CSS moves
+  // these prices under the name so the name isn't squeezed.
+  if (price && price.classList.contains('dish__prices')) {
+    card.classList.add('dish--two-sizes');
+  }
+
   const body = createElement('div', 'dish__body');
-  body.append(createElement('h3', 'dish__name', item.name));
+  body.append(header);
 
   if (item.description) {
     body.append(createElement('p', 'dish__description', item.description));
   }
 
-  const badges = createBadges(item);
-  if (badges) body.append(badges);
-
-  body.append(createElement('p', 'dish__price', describePrice(item)));
-
   if (!isAvailable) {
-    body.append(createElement('p', 'dish__sold-out', 'Not available today'));
+    body.append(createElement('p', 'dish__sold-out', 'Sold out today'));
   }
 
   card.append(body);
@@ -114,44 +131,68 @@ function createDishCard(item) {
   return card;
 }
 
-// "Rs. 1,200" or "Regular Rs. 1,200 · Large Rs. 1,600"
-function describePrice(item) {
+// One size:  <p>Rs. 1,200</p>
+// Two sizes: a small list — "Regular Rs. 1,200" and "Large Rs. 1,600" on separate lines.
+function createPrice(item) {
   const price = toPositiveNumber(item.price);
   const large = toPositiveNumber(item.price_large);
-  if (price === null) return '';
-  if (large === null) return formatPrice(price);
-  return `Regular ${formatPrice(price)} · Large ${formatPrice(large)}`;
-}
+  if (price === null) return null;
+  if (large === null) return createElement('p', 'dish__price', formatPrice(price));
 
-function createBadges(item) {
-  const badgeInfo = [
-    { show: toBool(item.featured), className: 'badge--featured', icon: '⭐', label: "Chef's special" },
-    { show: toBool(item.spicy), className: 'badge--spicy', icon: '🌶️', label: 'Spicy' },
-    { show: toBool(item.veg), className: 'badge--veg', icon: '🥬', label: 'Veg' }
-  ].filter((badge) => badge.show);
-
-  if (badgeInfo.length === 0) return null;
-
-  const list = createElement('ul', 'badges');
-  list.setAttribute('aria-label', 'Dish details');
-  badgeInfo.forEach((badge) => {
-    const listItem = createElement('li', `badge ${badge.className}`);
-    const icon = createElement('span', '', badge.icon);
-    icon.setAttribute('aria-hidden', 'true'); // screen readers read the label only
-    listItem.append(icon, ` ${badge.label}`);
-    list.append(listItem);
+  const list = createElement('dl', 'dish__prices');
+  [['Regular', price], ['Large', large]].forEach(([label, amount]) => {
+    const row = createElement('div');
+    row.append(createElement('dt', '', label), createElement('dd', '', formatPrice(amount)));
+    list.append(row);
   });
   return list;
 }
 
+// Small SVG icons after the dish name. Each icon has a hidden text label
+// so screen readers say "Spicy" etc. (the icon key at the top explains them visually).
+function createDishIcons(item) {
+  const iconInfo = [
+    { show: toBool(item.spicy), icon: 'flame', className: 'icon--spicy', label: 'Spicy' },
+    { show: toBool(item.veg), icon: 'leaf', className: 'icon--veg', label: 'Vegetarian' },
+    { show: toBool(item.featured), icon: 'star', className: 'icon--featured', label: "Chef's special" }
+  ].filter((info) => info.show);
+
+  if (iconInfo.length === 0) return null;
+
+  const wrapper = createElement('span', 'dish__icons');
+  iconInfo.forEach((info) => {
+    wrapper.append(createIcon(info.icon, info.className));
+    wrapper.append(createElement('span', 'visually-hidden', info.label));
+  });
+  return wrapper;
+}
+
+// Builds <svg class="icon"><use href="#icon-NAME"></svg>, pointing at the
+// icon set in index.html. SVG elements need createElementNS, not createElement.
+function createIcon(name, className) {
+  const svgNamespace = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNamespace, 'svg');
+  svg.setAttribute('class', `icon ${className}`);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const use = document.createElementNS(svgNamespace, 'use');
+  use.setAttribute('href', `#icon-${name}`);
+  svg.append(use);
+  return svg;
+}
+
+function hasPhoto(item) {
+  return Boolean(item.image) && IMAGE_NAME_PATTERN.test(item.image);
+}
+
 function createDishPhoto(item) {
-  if (!item.image || !IMAGE_NAME_PATTERN.test(item.image)) return null;
+  if (!hasPhoto(item)) return null;
 
   const img = createElement('img', 'dish__photo');
   img.src = `images/${item.image}`;
   img.alt = item.name;
-  img.width = 96;   // width/height reserve space so the page doesn't jump
-  img.height = 96;
+  img.width = 72;   // width/height reserve space so the page doesn't jump
+  img.height = 72;
   img.loading = 'lazy';
   img.decoding = 'async';
   img.addEventListener('error', () => img.remove()); // missing file → just no photo
@@ -163,15 +204,15 @@ function renderFooter(settings) {
   document.getElementById('opening-hours').textContent = settings.opening_hours || '';
   hoursBlock.hidden = !settings.opening_hours;
 
-  const address = document.getElementById('address');
-  address.textContent = settings.address || '';
-  address.hidden = !settings.address;
+  const addressBlock = document.getElementById('address-block');
+  document.getElementById('address').textContent = settings.address || '';
+  addressBlock.hidden = !settings.address;
 
   const callButton = document.getElementById('call-button');
   if (settings.phone) {
     // "tel:" links open the phone dialler. Keep only digits and a leading +.
     callButton.href = `tel:${String(settings.phone).replace(/[^\d+]/g, '')}`;
-    document.getElementById('call-label').textContent = `Call ${settings.phone}`;
+    document.getElementById('call-label').textContent = `Call us · ${settings.phone}`;
     callButton.hidden = false;
   }
 

@@ -164,16 +164,17 @@ Body shape: `{ "action": "...", "pin": "1234", "data": { ... } }`
 ## 5. Customer menu — `index.html`
 
 ### Layout (top to bottom)
-1. **Header:** restaurant name, tagline, optional notice banner.
-2. **Sticky category tabs** (horizontal scroll). Tapping scrolls to the section; the active tab highlights while scrolling (IntersectionObserver).
-3. **Search box** — filters by item name/description live; shows "No dishes found".
-4. **Sections per category** with item cards:
-   - Name, description, price (`Rs. 1,200`), and if `price_large`: "Regular Rs. 1,200 · Large Rs. 1,600".
-   - Badges: 🌶️ Spicy, 🥬 Veg, ⭐ Chef's special.
-   - Photo (if any), lazy-loaded (`loading="lazy"`), fixed aspect ratio to avoid layout jumps.
-   - Sold-out items: hidden, or greyed with "Not available today" if `show_sold_out` is TRUE.
-5. **Footer:** opening hours, tap-to-call phone button, "Open in Google Maps" link, small "Prices may change" note, small developer credit.
-6. **Back-to-top** button after scrolling.
+1. **Header:** logo image (`images/logo.webp`, the wordmark cropped from the original `images/logo.jpg`, shown 232px wide) as the page title, optional tagline and notice line.
+2. **Search box** — slim input with a search icon; filters by item name/description live; shows "No dishes found". Scrolls away with the header. Below it, a small icon key (Spicy / Vegetarian / Chef's special).
+3. **Sticky category tabs** (horizontal scroll, plain uppercase text, active tab = white text + 2px red underline). Tapping scrolls to the section; the active tab highlights while scrolling (IntersectionObserver) and scrolls into view.
+4. **Sections per category** as a printed-menu style list (no cards):
+   - Name on the left and price (`Rs. 1,200`) right-aligned on the same line; if `price_large`, two aligned lines "Regular Rs. 1,200" / "Large Rs. 1,600".
+   - Description below (max 2 lines). Thin divider between rows.
+   - Small inline SVG icons after the name: flame (spicy), leaf (veg), star (chef's special), each with a visually hidden text label.
+   - Photo (if any) as a 72px rounded thumbnail on the left, lazy-loaded with fixed size. If any dish in a category has a photo, rows without one keep the same indent.
+   - Sold-out items: hidden, or faded with "Sold out today" if `show_sold_out` is TRUE.
+5. **Footer:** opening hours, address, "Call us" button (outlined; red while pressed), "Directions" link (Google Maps), small "Prices may change" note, small developer credit.
+6. **Back-to-top** button after scrolling (small dark circle, white arrow).
 
 ### Behaviour
 - Show a **skeleton loader** while fetching.
@@ -182,9 +183,12 @@ Body shape: `{ "action": "...", "pin": "1234", "data": { ... } }`
 - Must work without photos.
 
 ### Visual style
-- Warm Chinese-restaurant feel: deep red primary, gold accent, off-white background, dark text. Define as CSS variables.
-- Respect `prefers-color-scheme: dark` (optional but nice for dim restaurants).
-- System font stack; no web-font download needed.
+- Dark, minimal, premium — matches the black/white/red logo. **Dark theme only** (no light/dark switching).
+- Colours (CSS variables in `css/style.css`): background `#0b0b0b`, surface `#151515` (only where needed), text `#f5f5f5`, secondary text `#a3a3a3`, thin dividers in low-opacity white.
+- **Red is the only accent**: `#e7190c` (sampled from the logo) for non-text accents (active tab underline, spicy icon, focus ring, pressed button). Small red text (prices) uses `#f23a2c`, a slightly lighter tint, because the logo red is 4.26:1 on the background, below WCAG AA's 4.5:1.
+- No gold, gradients, glows, heavy shadows, card grids or emojis.
+- Font: **Montserrat** from Google Fonts (weights 500, 600, 800 only, `display=swap`) with a system-font fallback. Category headings uppercase, 800, letter-spaced. No script fonts outside the logo image.
+- All text meets WCAG AA contrast; focus states visible; `prefers-reduced-motion` turns off smooth scrolling and animations.
 
 ---
 

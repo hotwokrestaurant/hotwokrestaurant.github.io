@@ -24,6 +24,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 | Layer | Technology |
 |---|---|
 | Frontend | Plain HTML, CSS, vanilla JavaScript (ES modules). **No frameworks, no build step, no npm runtime dependencies.** |
+| Font | **Montserrat** from Google Fonts (free) — weights 500, 600, 800 only, `display=swap`, system-font fallback. This is the ONLY web font allowed. |
 | Database | Google Sheets |
 | Backend API | Google Apps Script deployed as a Web App |
 | Hosting | GitHub Pages |
@@ -36,11 +37,12 @@ The developer (Janana) is a **beginner** building this for free as a real client
 3. **All validation happens server-side** in Apps Script, even if the frontend also validates.
 4. **Never insert user/sheet data with `innerHTML`.** Use `textContent` / `createElement` to prevent XSS.
 5. **Mobile-first.** Design for ~360px wide Android phones on slow mobile data first. Touch targets ≥ 44px. Base font ≥ 16px.
-6. **Fast and light.** Customer page should be usable quickly on 3G. Images in `.webp`, ideally under 100 KB each. No heavy libraries.
-7. **Graceful failure.** If the API fails, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
+6. **Fast and light.** Customer page should be usable quickly on 3G. Images in `.webp`, ideally under 100 KB each. No heavy libraries. The only external request allowed is the Montserrat Google Font (see Tech stack).7. **Graceful failure.** If the API fails, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
 8. **Prices** are stored as plain numbers (LKR) and displayed as `Rs. 1,250`.
 9. **Wrap all `localStorage` access in try/catch** — it can be unavailable.
 10. Do not delete or rename sheet columns or change the API contract without updating `docs/PROJECT_SPEC.md` and telling the developer.
+11. **Brand look (customer menu):** dark theme only, black/white plus the logo red as the single accent colour. See "Visual style" in `docs/PROJECT_SPEC.md`.
+12. **No `Co-Authored-By` lines** (or any other AI attribution) in suggested commit messages.
 
 ## Project structure
 
