@@ -31,6 +31,8 @@ Owner phone ──home icon──► admin.html  (GitHub Pages)
 ```
 
 - Sheet = database. Apps Script = API. GitHub Pages = static hosting.
+- Customer menu: **https://hotwokrestaurant.github.io/** · Admin: **https://hotwokrestaurant.github.io/admin.html**
+- Repo: `hotwokrestaurant/hotwokrestaurant.github.io` (GitHub organization Pages site; the repo name must stay exactly this for the root URL to work).
 - The customer page only reads. The admin page reads and writes.
 
 ---
@@ -224,10 +226,11 @@ Designed for **non-technical owners using only a phone**.
 ## 7. QR code — `tools/generate-qr.js`
 
 - Node script using the open-source `qrcode` npm package (dev dependency only).
-- Encodes the final customer menu URL (static QR — never expires).
+- Encodes the final customer menu URL **https://hotwokrestaurant.github.io/** (static QR — never expires).
+- ⚠️ Once printed, the QR can't change: never rename the `hotwokrestaurant` organization or the `hotwokrestaurant.github.io` repo.
 - Outputs `qr/menu-qr.png` (high resolution, ≥ 1000 px) and `qr/menu-qr.svg`.
 - Error correction level **M** (or **H** if a logo is placed in the centre later).
-- Also generate `qr/table-card.html`: a printable A6 table card with the restaurant name, "Scan for our menu 📱", the QR code, and the short URL underneath.
+- Also generate `qr/table-card.html`: a printable A6 table card with the restaurant name, "Scan for our menu 📱", the QR code, and the short URL `hotwokrestaurant.github.io` underneath.
 
 ---
 
@@ -242,7 +245,7 @@ Work through these in order. Stop after each phase for review.
 | **3. Connect customer menu** | `js/api.js`, `js/config.js`; caching + error states | Menu loads from the sheet; works offline from cache |
 | **4. Admin page** | `admin.html`, `css/admin.css`, `js/admin.js` | Owner can log in, toggle, edit, add, delete on a phone |
 | **5. Home-screen install** | `manifest.json`, icons | "Add to Home screen" shows proper name and icon |
-| **6. Deploy** | GitHub Pages live; final URL in README | Works on real Android + iPhone over mobile data |
+| **6. Deploy** | GitHub Pages live at https://hotwokrestaurant.github.io/; URL in README | Works on real Android + iPhone over mobile data |
 | **7. QR + table card** | `tools/generate-qr.js`, `qr/` outputs | QR scans reliably in dim light from ~30 cm |
 | **8. Handover docs** | `README.md` incl. a simple **Owner Guide** (how to change a price, hide a dish, add a dish, what to do if something breaks) | Owner completes 3 tasks unaided |
 

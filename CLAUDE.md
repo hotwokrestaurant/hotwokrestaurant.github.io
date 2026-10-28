@@ -10,6 +10,11 @@ A free QR-code digital menu for **Hot Wok Restaurant**, a small Chinese restaura
 - **The owner** manages the menu from a PIN-protected admin page on their phone (they do NOT use computers).
 - **Everything must cost Rs. 0** to build and run — for the restaurant and for the developer.
 
+**Live URLs**
+- Customer menu (encoded in the printed QR code): https://hotwokrestaurant.github.io/
+- Admin page: https://hotwokrestaurant.github.io/admin.html
+- GitHub repo: `hotwokrestaurant/hotwokrestaurant.github.io` (an organization Pages site — the repo must keep this exact name to be served at the root URL).
+
 ## About the developer
 
 The developer (Janana) is a **beginner** building this for free as a real client project and portfolio piece.
@@ -27,7 +32,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 | Font | **Montserrat** from Google Fonts (free) — weights 500, 600, 800 only, `display=swap`, system-font fallback. This is the ONLY web font allowed. |
 | Database | Google Sheets |
 | Backend API | Google Apps Script deployed as a Web App |
-| Hosting | GitHub Pages |
+| Hosting | GitHub Pages (organization site), served at https://hotwokrestaurant.github.io/ |
 | Tooling only (not shipped) | Node.js scripts allowed for dev tasks, e.g. QR code generation |
 
 ## Hard rules
@@ -37,7 +42,8 @@ The developer (Janana) is a **beginner** building this for free as a real client
 3. **All validation happens server-side** in Apps Script, even if the frontend also validates.
 4. **Never insert user/sheet data with `innerHTML`.** Use `textContent` / `createElement` to prevent XSS.
 5. **Mobile-first.** Design for ~360px wide Android phones on slow mobile data first. Touch targets ≥ 44px. Base font ≥ 16px.
-6. **Fast and light.** Customer page should be usable quickly on 3G. Images in `.webp`, ideally under 100 KB each. No heavy libraries. The only external request allowed is the Montserrat Google Font (see Tech stack).7. **Graceful failure.** If the API fails, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
+6. **Fast and light.** Customer page should be usable quickly on 3G. Images in `.webp`, ideally under 100 KB each. No heavy libraries. The only external request allowed is the Montserrat Google Font (see Tech stack).
+7. **Graceful failure.** If the API fails, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
 8. **Prices** are stored as plain numbers (LKR) and displayed as `Rs. 1,250`.
 9. **Wrap all `localStorage` access in try/catch** — it can be unavailable.
 10. Do not delete or rename sheet columns or change the API contract without updating `docs/PROJECT_SPEC.md` and telling the developer.
@@ -47,7 +53,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 ## Project structure
 
 ```
-hot-wok-menu/
+hotwokrestaurant.github.io/  ← repo root (the local folder may still be called hot-wok-menu)
 ├── CLAUDE.md
 ├── README.md                ← setup + owner guide
 ├── index.html               ← customer menu
@@ -80,5 +86,5 @@ hot-wok-menu/
 - Phone text size at 200% (and iPhone "aA" page zoom): nothing overlaps, is cut off, or scrolls sideways.
 - Older phones: avoid newer JS/CSS without a fallback (e.g. `replaceChildren()`, flex `gap`, `min()`); see the comments in `css/style.css`.
 - Network throttling "Slow 4G" / "3G".
-- Open on a real phone via GitHub Pages (or local network) when possible.
+- Open on a real phone via https://hotwokrestaurant.github.io/ (or local network) when possible.
 - Admin: wrong PIN rejected, correct PIN works, changes appear on the customer menu after refresh.
