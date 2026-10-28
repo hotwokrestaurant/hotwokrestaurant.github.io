@@ -9,10 +9,10 @@
   --color-surface: #151515;          /* slightly lighter, used only where needed */
   --color-text: #f5f5f5;             /* primary text — 18:1 on the background */
   --color-text-muted: #a3a3a3;       /* secondary text — 7.8:1 (passes WCAG AA) */
-  --color-red: #e7190c;              /* exact red sampled from images/logo.jpg */
-  --color-red-text: #f23a2c;         /* same red, a touch lighter, for small red TEXT.
-                                        The logo red is 4.26:1 on our background —
-                                        just under AA's 4.5:1 for text; this is 5.08:1. */
+  --color-price: #e0e0e0;            /* soft white, a touch dimmer than names — 14.9:1 */
+  --color-red: #e7190c;              /* exact red sampled from images/logo.jpg.
+                                        Brand accents only (never text): 4.26:1 here,
+                                        fine for icons/lines (need 3:1), too low for text. */
   --color-line: rgba(255, 255, 255, 0.12);         /* thin dividers, like the logo lines */
   --color-line-strong: rgba(255, 255, 255, 0.28);
   --color-control-border: #6b6b6b;   /* input border — 3.7:1, visible enough for a control */
@@ -398,11 +398,13 @@ a {
   vertical-align: -2px;
 }
 
+/* Prices are deliberately quiet: soft white, normal weight, a little smaller
+   than the dish name, so the food is what stands out. */
 .dish__price,
 .dish__prices dd {
-  color: var(--color-red-text);
-  font-size: 1.0625rem;
-  font-weight: 600;
+  color: var(--color-price);
+  font-size: 1rem;
+  font-weight: 500;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;  /* every digit the same width, so prices line up */
   white-space: nowrap;
@@ -424,6 +426,11 @@ a {
 .dish__prices dt {
   color: var(--color-text-muted);
   font-size: 0.875rem;
+}
+
+.price__currency {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
 }
 
 /* Two sizes in a category with photos: the photo column leaves too little

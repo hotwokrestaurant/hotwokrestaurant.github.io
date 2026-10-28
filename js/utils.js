@@ -4,7 +4,12 @@
 const priceFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 export function formatPrice(amount) {
-  return `Rs. ${priceFormatter.format(amount)}`;
+  return `Rs. ${formatAmount(amount)}`;
+}
+
+// Just the number part, e.g. 1250 -> "1,250" (for when "Rs." is styled separately).
+export function formatAmount(amount) {
+  return priceFormatter.format(amount);
 }
 
 // Google Sheets can give us true / "TRUE" / "true" — treat them all the same.

@@ -185,7 +185,8 @@ Body shape: `{ "action": "...", "pin": "1234", "data": { ... } }`
 ### Visual style
 - Dark, minimal, premium — matches the black/white/red logo. **Dark theme only** (no light/dark switching).
 - Colours (CSS variables in `css/style.css`): background `#0b0b0b`, surface `#151515` (only where needed), text `#f5f5f5`, secondary text `#a3a3a3`, thin dividers in low-opacity white.
-- **Red is the only accent**: `#e7190c` (sampled from the logo) for non-text accents (active tab underline, spicy icon, focus ring, pressed button). Small red text (prices) uses `#f23a2c`, a slightly lighter tint, because the logo red is 4.26:1 on the background, below WCAG AA's 4.5:1.
+- **Red is the only accent**: `#e7190c` (sampled from the logo), used only for brand accents: active tab underline, spicy flame icon, focus ring, pressed Call button. Never for text (it is 4.26:1 on the background, below WCAG AA's 4.5:1 for text).
+- **Prices are deliberately understated** so attention goes to the food, not the cost: soft white `#e0e0e0`, weight 500, slightly smaller than the dish name, tabular numbers, right-aligned. The "Rs." prefix is smaller and grey; "Regular/Large" labels are grey.
 - No gold, gradients, glows, heavy shadows, card grids or emojis.
 - Font: **Montserrat** from Google Fonts (weights 500, 600, 800 only, `display=swap`) with a system-font fallback. Category headings uppercase, 800, letter-spaced. No script fonts outside the logo image.
 - All text meets WCAG AA contrast; focus states visible; `prefers-reduced-motion` turns off smooth scrolling and animations.

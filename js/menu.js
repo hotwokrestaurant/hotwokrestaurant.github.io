@@ -2,7 +2,7 @@
 // Phase 1 uses local sample data. In Phase 3 this will come from the Apps Script API.
 
 import { SAMPLE_MENU } from './sample-data.js';
-import { formatPrice, toBool, toPositiveNumber, normalizeText, createElement } from './utils.js';
+import { formatAmount, toBool, toPositiveNumber, normalizeText, createElement } from './utils.js';
 
 // Only simple image file names are allowed, e.g. "chicken-kottu.webp".
 const IMAGE_NAME_PATTERN = /^[a-z0-9_-]+\.(webp|jpg|jpeg|png)$/i;
@@ -137,15 +137,26 @@ function createPrice(item) {
   const price = toPositiveNumber(item.price);
   const large = toPositiveNumber(item.price_large);
   if (price === null) return null;
-  if (large === null) return createElement('p', 'dish__price', formatPrice(price));
+  if (large === null) {
+    const single = createElement('p', 'dish__price');
+    single.append(...createPriceParts(price));
+    return single;
+  }
 
   const list = createElement('dl', 'dish__prices');
   [['Regular', price], ['Large', large]].forEach(([label, amount]) => {
     const row = createElement('div');
-    row.append(createElement('dt', '', label), createElement('dd', '', formatPrice(amount)));
+    const value = createElement('dd');
+    value.append(...createPriceParts(amount));
+    row.append(createElement('dt', '', label), value);
     list.append(row);
   });
   return list;
+}
+
+// "Rs. 1,200" as two pieces, so "Rs." can be smaller and grey and the number reads first.
+function createPriceParts(amount) {
+  return [createElement('span', 'price__currency', 'Rs. '), formatAmount(amount)];
 }
 
 // Small SVG icons after the dish name. Each icon has a hidden text label
