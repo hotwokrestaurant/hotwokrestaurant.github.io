@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hot Wok Restaurant – Menu</title>
+  <meta name="description" content="Menu of Hot Wok Restaurant: fried rice, kottu, noodles, devilled dishes, soups and beverages.">
+  <meta name="theme-color" content="#b3121b">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/menu.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#menu">Skip to menu</a>
+
+  <header class="site-header">
+    <h1 id="restaurant-name" class="site-header__name">Hot Wok Restaurant</h1>
+    <p id="tagline" class="site-header__tagline"></p>
+    <p id="notice" class="notice" hidden></p>
+  </header>
+
+  <!-- Sticky category tabs. Filled in by js/menu.js -->
+  <nav class="category-tabs" aria-label="Menu categories">
+    <ul id="category-tabs" class="category-tabs__list"></ul>
+  </nav>
+
+  <div class="search">
+    <label for="search-input" class="visually-hidden">Search dishes</label>
+    <input id="search-input" class="search__input" type="search"
+           placeholder="Search dishes…" autocomplete="off" enterkeyhint="search">
+  </div>
+
+  <main id="menu" class="menu" aria-busy="true">
+    <!-- Skeleton loader: grey placeholder cards shown until the menu is ready -->
+    <div id="menu-sections">
+      <div class="skeleton" aria-hidden="true">
+        <div class="skeleton__title"></div>
+        <div class="skeleton__card"></div>
+        <div class="skeleton__card"></div>
+        <div class="skeleton__card"></div>
+      </div>
+      <p class="visually-hidden">Loading menu…</p>
+    </div>
+    <p id="no-results" class="no-results" role="status" hidden>No dishes found.</p>
+  </main>
+
+  <footer class="site-footer">
+    <div id="hours-block" class="site-footer__block" hidden>
+      <h2 class="site-footer__heading">Opening hours</h2>
+      <p id="opening-hours"></p>
+    </div>
+    <p id="address" class="site-footer__address" hidden></p>
+    <div class="site-footer__actions">
+      <a id="call-button" class="button button--primary" href="#" hidden>
+        <span aria-hidden="true">📞</span> <span id="call-label">Call us</span>
+      </a>
+      <a id="map-link" class="button button--secondary" href="#" target="_blank" rel="noopener" hidden>
+        <span aria-hidden="true">📍</span> Open in Google Maps
+      </a>
+    </div>
+    <p class="site-footer__small">Prices may change without notice.</p>
+    <p class="site-footer__small">Digital menu by Janana</p>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" type="button" aria-label="Back to top" hidden>↑</button>
+
+  <noscript>
+    <p class="noscript">Please turn on JavaScript to see the menu, or ask our staff for a printed menu.</p>
+  </noscript>
+</body>
+</html>
