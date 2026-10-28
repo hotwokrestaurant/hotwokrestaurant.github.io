@@ -1,0 +1,167 @@
+rules_version = '2';
+
+// Hot Wok Restaurant — Firestore security rules.
+//
+// How to publish: Firebase console → Firestore Database → Rules tab →
+// replace everything with this file → Publish. (Details: firebase/README.md)
+//
+// What these rules allow:
+//   • Anyone (customers, signed out) can READ the single menu document
+//     menu/published. Nothing else can be read.
+//   • Only signed-in users listed in the "admins" collection (the owner) can
+//     WRITE that document, and only if the new data passes every check below.
+//   • Everything else is denied. Firestore denies anything not allowed here.
+//
+// Two Firestore limits shape these rules:
+//   1. Rules have no loops, so they can't check every dish in a long list.
+//      Instead, each save checks only the dishes that are NEW or CHANGED
+//      compared with the saved menu, and a save may change at most 3 dishes.
+//      Settings and categories are likewise checked only when they change.
+//      Everything is therefore checked when it is written, and stays valid.
+//   2. A rule may take at most 1,000 steps per request. The checks are written
+//      to be cheap (e.g. counting fields instead of comparing long lists), and
+//      a save that changes the categories can't also change dishes.
+//      Measured in the Firestore emulator (with 18 and 150 dishes), every
+//      allowed kind of save fits comfortably.
+//
+// The admin page saves one change at a time (2 dishes when reordering), and
+// the setup page creates the menu without dishes, then adds 3 dishes per save.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- The owner allow-list ----------
+
+    // A user is an admin if a document with their UID exists in "admins".
+    // Those documents are created by hand in the Firebase console.
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // ---------- Settings (checked only when changed) ----------
+
+    // Exactly these 8 fields: each one must exist with the right type, and the
+    // count must be 8, so no unknown field can sneak in.
+    function validSettings(s) {
+      return s is map && s.keys().size() == 8
+        && s.restaurant_name is string && s.restaurant_name.size() > 0 && s.restaurant_name.size() <= 60
+        && s.tagline is string && s.tagline.size() <= 80
+        && s.phone is string && s.phone.size() <= 30
+        && s.address is string && s.address.size() <= 150
+        && s.opening_hours is string && s.opening_hours.size() <= 150
+        && s.notice is string && s.notice.size() <= 120
+        // Map link: empty, or an https:// address with no spaces.
+        && s.map_url is string && s.map_url.size() <= 300
+        && s.map_url.matches('(https://[^ ]+)?')
+        && s.show_sold_out is bool;
+    }
+
+    // ---------- Categories (checked only when changed) ----------
+
+    // The only category names allowed. To add a new category later, add it
+    // to this pattern (separated by |), publish the rules again, then add it
+    // to the menu data.
+    function categoryNamePattern() {
+      return 'Fried Rice|Kottu|Noodles|Devilled Dishes|Soups|Side Dishes|Beverages|Desserts';
+    }
+
+    // Exactly 3 fields: name, sort_order, visible.
+    function validCategory(c) {
+      return c is map && c.keys().size() == 3
+        && c.name is string && c.name.matches(categoryNamePattern())
+        && c.sort_order is int && c.sort_order >= 0 && c.sort_order <= 1000
+        && c.visible is bool;
+    }
+
+    // True if position i is past the end of the list, or holds a valid category.
+    function categoryAt(cats, i) {
+      return cats.size() <= i || validCategory(cats[i]);
+    }
+
+    function validCategories(cats) {
+      return cats is list && cats.size() >= 1 && cats.size() <= 8
+        && categoryAt(cats, 0) && categoryAt(cats, 1) && categoryAt(cats, 2)
+        && categoryAt(cats, 3) && categoryAt(cats, 4) && categoryAt(cats, 5)
+        && categoryAt(cats, 6) && categoryAt(cats, 7);
+    }
+
+    // ---------- Dishes (only new or changed ones are checked) ----------
+
+    // 9 required fields + up to 3 optional ones (description, price_large,
+    // image). Every field is type-checked, and the field count must match
+    // exactly, so no unknown field can sneak in.
+    function validItem(item) {
+      return item is map
+        && item.keys().size() == 9
+             + ('description' in item ? 1 : 0)
+             + ('price_large' in item ? 1 : 0)
+             + ('image' in item ? 1 : 0)
+        // id like "itm_ko0001": lower-case letters/digits only.
+        && item.id is string && item.id.matches('itm_[a-z0-9]{4,20}')
+        && item.category is string && item.category.matches(categoryNamePattern())
+        && item.name is string && item.name.size() > 0 && item.name.size() <= 60
+        && (!('description' in item)
+            || (item.description is string && item.description.size() <= 150))
+        // Prices are whole rupees: positive integers, at most 100,000.
+        && item.price is int && item.price > 0 && item.price <= 100000
+        // Large price: missing, null (= one size only), or a valid price.
+        && (!('price_large' in item) || item.price_large == null
+            || (item.price_large is int && item.price_large > 0 && item.price_large <= 100000))
+        && item.spicy is bool && item.veg is bool
+        && item.available is bool && item.featured is bool
+        // Photo: missing, empty, or a simple file name in the repo's images/ folder.
+        && (!('image' in item)
+            || (item.image is string && item.image.size() <= 80
+                && item.image.matches('([a-z0-9_-]+[.](webp|jpg|jpeg|png))?')))
+        && item.sort_order is int && item.sort_order >= 0 && item.sort_order <= 10000;
+    }
+
+    // True if position i is past the end of the list, or holds a valid dish.
+    function itemAt(items, i) {
+      return items.size() <= i || validItem(items[i]);
+    }
+
+    // ---------- The whole menu document ----------
+
+    function validMenu() {
+      let data = request.resource.data;
+      let isNew = resource == null;
+      // Dishes in the new menu that weren't in the saved menu, exactly as they
+      // were (i.e. added or edited). Deleted dishes simply disappear.
+      let changedItems = data.items.removeAll(isNew ? [] : resource.data.items);
+
+      // Exactly 4 top-level fields (each one is checked below).
+      return data.keys().size() == 4
+        // updatedAt must be the server's clock (serverTimestamp()), not the phone's.
+        && data.updatedAt == request.time
+        && ((!isNew && data.settings == resource.data.settings) || validSettings(data.settings))
+        // Checking all categories is the costliest check, so a save that changes
+        // the categories (including creating the menu) can't also add or change
+        // dishes. Save category changes on their own.
+        && ((!isNew && data.categories == resource.data.categories)
+            || (changedItems.size() == 0 && validCategories(data.categories)))
+        && data.items is list && data.items.size() <= 200
+        && changedItems.size() <= 3
+        && itemAt(changedItems, 0) && itemAt(changedItems, 1) && itemAt(changedItems, 2);
+    }
+
+    // ---------- Access rules ----------
+
+    // The published menu: one document, menu/published.
+    match /menu/{docId} {
+      // "get" = read one document by its name. Listing the collection is not allowed.
+      allow get: if docId == 'published';
+      allow create, update: if docId == 'published' && isAdmin() && validMenu();
+      // No delete: the menu document should never disappear.
+    }
+
+    // The allow-list itself. Managed only in the Firebase console
+    // (the console isn't limited by these rules). Apps can't read or change it.
+    match /admins/{uid} {
+      allow read, write: if false;
+    }
+
+    // Anything not matched above is denied automatically.
+  }
+}

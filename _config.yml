@@ -1,0 +1,15 @@
+# GitHub Pages build settings. This file ONLY decides what gets published on
+# https://hotwokrestaurant.github.io/ — it changes nothing in the repo.
+#
+# Developer-only files stay in the repo (so they're versioned and reusable)
+# but are NOT served on the website. After each deploy, check that
+# https://hotwokrestaurant.github.io/firebase/setup.html shows "404".
+#
+# Note: this works because GitHub Pages builds the site with Jekyll by default.
+# Don't add a ".nojekyll" file, or these exclusions stop working.
+exclude:
+  - firebase
+  - docs
+  - tools
+  - CLAUDE.md
+  - README.md

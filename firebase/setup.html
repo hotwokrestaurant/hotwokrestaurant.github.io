@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Hot Wok – Firebase setup (developer only)</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="setup.css">
+  <script type="module" src="setup.js"></script>
+</head>
+<body>
+  <!-- Developer tool: open it from your computer at http://localhost:8000/firebase/setup.html
+       (see firebase/README.md, step G). Customers never see this page. -->
+  <main class="setup">
+    <h1 class="setup__title">Firebase setup &amp; tests</h1>
+    <p class="setup__intro">Developer tool. Run the steps from top to bottom. Results appear in the log at the bottom.</p>
+    <p id="project" class="setup__project">Connecting…</p>
+
+    <section class="setup__step" aria-labelledby="step1">
+      <h2 id="step1">1. Tests while signed out</h2>
+      <p>Customers are signed out. They must be able to read the menu, but not change it.</p>
+      <button id="test-read" class="button" type="button">Test: read the menu</button>
+      <button id="test-guest-write" class="button" type="button">Test: write while signed out (should be blocked)</button>
+    </section>
+
+    <section class="setup__step" aria-labelledby="step2">
+      <h2 id="step2">2. Sign in as the owner</h2>
+      <form id="sign-in" class="setup__form">
+        <label for="email">Owner email</label>
+        <input id="email" class="setup__input" type="email" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" class="setup__input" type="password" autocomplete="current-password" required>
+        <button class="button" type="submit">Sign in</button>
+      </form>
+      <p id="who" class="setup__who">Signed out.</p>
+      <button id="sign-out" class="button" type="button">Sign out</button>
+    </section>
+
+    <section class="setup__step" aria-labelledby="step3">
+      <h2 id="step3">3. Load the starting menu</h2>
+      <p>Copies <code>firebase/menu-seed.json</code> into Firestore (3 dishes per save, so every dish passes the security rules).</p>
+      <label class="setup__check">
+        <input id="allow-replace" type="checkbox">
+        Replace the menu if one already exists (this overwrites the owner's changes!)
+      </label>
+      <button id="seed" class="button" type="button">Load starting menu</button>
+    </section>
+
+    <section class="setup__step" aria-labelledby="step4">
+      <h2 id="step4">4. Tests while signed in as the owner</h2>
+      <button id="test-owner-write" class="button" type="button">Test: owner can save (re-saves the same menu)</button>
+      <button id="test-invalid" class="button" type="button">Test: a 61-character dish name is rejected</button>
+    </section>
+
+    <section class="setup__step" aria-labelledby="log-title">
+      <h2 id="log-title">Log</h2>
+      <ol id="log" class="setup__log" role="log" aria-live="polite"></ol>
+    </section>
+  </main>
+</body>
+</html>

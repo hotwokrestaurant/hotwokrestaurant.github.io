@@ -1,0 +1,92 @@
+/* Styles for the developer-only setup page (firebase/setup.html). */
+
+.setup {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) var(--space-7);
+}
+
+.setup__title {
+  font-size: 1.5rem;
+}
+
+.setup__intro,
+.setup__project {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.setup__step {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-line);
+}
+
+.setup__step h2 {
+  margin-bottom: var(--space-2);
+  font-size: 1.125rem;
+}
+
+.setup__step p {
+  margin-bottom: var(--space-3);
+}
+
+.setup__step .button {
+  margin-bottom: var(--space-2);
+}
+
+.setup__form label {
+  display: block;
+  margin-top: var(--space-3);
+}
+
+.setup__input {
+  width: 100%;
+  min-height: 48px;
+  margin: var(--space-1) 0 var(--space-3);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+}
+
+.setup__who {
+  margin: var(--space-3) 0;
+  color: var(--color-text-muted);
+}
+
+.setup__check {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.setup__check input {
+  width: 20px;
+  height: 20px;
+  margin: 2px var(--space-2) 0 0;
+  flex: 0 0 auto;
+}
+
+.setup__log {
+  padding-left: var(--space-5);
+  font-size: 0.9375rem;
+}
+
+.setup__log li {
+  margin-bottom: var(--space-2);
+}
+
+.setup__log .is-pass {
+  color: var(--color-veg);
+}
+
+.setup__log .is-fail {
+  color: #ff8a80;                    /* light red: readable on black (developer page only) */
+}
+
+code {
+  font-size: 0.9em;
+}

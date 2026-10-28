@@ -1,7 +1,8 @@
-// Sample menu data for Phase 1 (no backend yet).
-// It has the SAME shape as the future API response for `GET ?action=menu`:
-//   { settings, categories, items }
-// so in Phase 3 we can swap this file for a real fetch without changing menu.js.
+// Sample menu data (used until Phase 3 connects the page to Firestore).
+// It has the SAME shape as the Firestore document menu/published:
+//   { settings, categories, items }   (Firestore also adds updatedAt)
+// so in Phase 3 we can swap this for a real read without changing menu.js.
+// firebase/menu-seed.json is generated from this file.
 // All prices, descriptions and contact details are PLACEHOLDERS.
 
 export const SAMPLE_MENU = {

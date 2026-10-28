@@ -1,5 +1,5 @@
 // Customer menu: turns menu data into the page.
-// Phase 1 uses local sample data. In Phase 3 this will come from the Apps Script API.
+// For now it uses local sample data. In Phase 3 it will come from Firestore (menu/published).
 
 import { SAMPLE_MENU } from './sample-data.js';
 import { formatAmount, toBool, toPositiveNumber, normalizeText, createElement, clearElement } from './utils.js';

@@ -12,7 +12,8 @@ export function formatAmount(amount) {
   return priceFormatter.format(amount);
 }
 
-// Google Sheets can give us true / "TRUE" / "true" — treat them all the same.
+// Accept true / "TRUE" / "true" alike (Firestore stores real booleans, but
+// being lenient keeps older cached data and hand-edited values working).
 export function toBool(value) {
   return value === true || String(value).trim().toUpperCase() === 'TRUE';
 }
@@ -29,7 +30,7 @@ export function normalizeText(text) {
 }
 
 // Safe way to build HTML elements.
-// We ALWAYS use textContent (never innerHTML) so text from the sheet is shown
+// We ALWAYS use textContent (never innerHTML) so text from the database is shown
 // as plain text — a dish called "<script>" can never run as code (prevents XSS).
 export function createElement(tag, className, text) {
   const element = document.createElement(tag);
