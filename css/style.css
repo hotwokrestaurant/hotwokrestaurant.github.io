@@ -10,11 +10,15 @@
   --color-text: #f5f5f5;             /* primary text — 18:1 on the background */
   --color-text-muted: #a3a3a3;       /* secondary text — 7.8:1 (passes WCAG AA) */
   --color-price: #e0e0e0;            /* soft white, a touch dimmer than names — 14.9:1 */
+  --color-veg: #5dbb63;              /* soft green, vegetarian leaf icon only — 8.2:1 */
   --color-red: #e7190c;              /* exact red sampled from images/logo.jpg.
                                         Brand accents only (never text): 4.26:1 here,
                                         fine for icons/lines (need 3:1), too low for text. */
   --color-line: rgba(255, 255, 255, 0.12);         /* thin dividers, like the logo lines */
   --color-line-strong: rgba(255, 255, 255, 0.28);
+  --color-ornament: rgba(255, 255, 255, 0.25);     /* line-art decorations */
+  --color-frame-line: rgba(255, 255, 255, 0.45);   /* hairlines framing headings etc. */
+  --color-leader: rgba(255, 255, 255, 0.3);        /* dotted leaders, name → price */
   --color-control-border: #6b6b6b;   /* input border — 3.7:1, visible enough for a control */
   --color-skeleton: #1c1c1c;
 
@@ -44,7 +48,8 @@
 }
 
 html {
-  -webkit-text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;    /* stop iPhones enlarging text in landscape */
+  text-size-adjust: 100%;
 }
 
 body {
@@ -112,16 +117,19 @@ a {
   height: 16px;
 }
 
+/* Icon colours carry meaning, but the shapes (flame, leaf, star) and the
+   hidden text labels do too, so colour-blind users lose nothing.
+   Only the icons are coloured — never names, prices or rows. */
 .icon--spicy {
   color: var(--color-red);
 }
 
 .icon--veg {
-  color: var(--color-text-muted);
+  color: var(--color-veg);
 }
 
 .icon--featured {
-  color: var(--color-text);
+  color: var(--color-price);         /* soft off-white, no gold */
 }
 
 .skip-link {
@@ -141,12 +149,39 @@ a {
 
 /* ---------- Header ---------- */
 .site-header {
+  position: relative;                /* anchors the lattice below (no z-index on purpose) */
   padding: var(--space-5) var(--space-4) var(--space-4);
   text-align: center;
 }
 
-/* images/logo.webp is 464×180 px. Showing it at half that width means
-   2 image pixels per screen pixel, which keeps it sharp on most phones. */
+/* Extremely faint Chinese window-lattice pattern, only behind the logo.
+   The tile is a tiny SVG written right here (no download). The mask fades
+   its edges out so there is no visible box. z-index -1 puts it behind the
+   logo, which blends with it, so the logo stays fully crisp. */
+.site-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: -1;
+  width: 360px;
+  max-width: 100%;
+  height: 138px;                     /* centred on the logo (24px padding + 90px logo + 24px) */
+  transform: translateX(-50%);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='none' stroke='%23fff'%3E%3Cpath d='M0 .5h28M.5 0v28M14 .5v9M14 18.5v9M.5 14h9M18.5 14h9'/%3E%3Crect x='9.5' y='9.5' width='9' height='9'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.05;
+  /* Strongest in the middle, fading evenly to nothing well before the edges. */
+  -webkit-mask-image: radial-gradient(closest-side, #000, transparent);
+  mask-image: radial-gradient(closest-side, #000, transparent);
+  pointer-events: none;
+}
+
+/* The logo is always shown in a 232 × 90px frame (shape 464:180).
+   With the 464px-wide logo.webp that is exactly 2 image pixels per screen
+   pixel, so it stays sharp on high-density phone screens.
+   object-fit: cover fills the frame and trims any extra black at the sides,
+   so the wordmark looks the same size whether logo.webp is a tight crop
+   (464×180) or a wider one with more black around it (e.g. 640×187). */
 .site-header__logo {
   width: 232px;
   max-width: 100%;
@@ -156,15 +191,55 @@ a {
 .site-header__logo img {
   width: 100%;
   height: auto;
-  /* The logo's black is pure #000; "lighten" lets our #0b0b0b show through it,
-     so there is no visible box around the logo. */
+  aspect-ratio: 464 / 180;
+  object-fit: cover;
+  /* The logo's black may not be exactly our #0b0b0b; "lighten" keeps whichever
+     is brighter, so the page colour shows through and there's no visible box. */
   mix-blend-mode: lighten;
 }
 
 .site-header__tagline {
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
   color: var(--color-text-muted);
   font-size: 0.9375rem;
+  line-height: 1.4;
+  text-wrap: balance;                /* if it wraps at 360px, both lines are similar length */
+}
+
+/* ---------- Thin framing lines ("—— text ——"), like beside "Restaurant" in the logo ---------- */
+.line-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.line-frame::before,
+.line-frame::after {
+  content: '';
+  flex: 0 1 var(--frame-line, 64px); /* lines shrink (down to 16px) when space is tight */
+  min-width: 16px;
+  height: 1px;
+  transform: scaleY(0.5);            /* a hairline: half a pixel, crisp on phone screens */
+  background: var(--color-frame-line);
+}
+
+/* Space between line and text: margins rather than flex "gap",
+   which older phones (Safari before 14.1, Chrome before 84) ignore. */
+.line-frame::before {
+  margin-right: var(--frame-gap, 10px);
+}
+
+.line-frame::after {
+  margin-left: var(--frame-gap, 10px);
+}
+
+/* The framed content (text in a <span>, or an icon) never shrinks, so only the
+   lines give way. Its max width leaves room for two 16px lines + gaps, so very
+   long text wraps instead of overflowing. */
+.line-frame > * {
+  flex: 0 0 auto;
+  max-width: calc(100% - 2 * (16px + var(--frame-gap, 10px)));
+  text-wrap: balance;                /* if it does wrap, keep the lines even */
 }
 
 .notice {
@@ -217,7 +292,6 @@ a {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--space-1) var(--space-4);
   margin: var(--space-3) 0 0;
   padding: 0;
   list-style: none;
@@ -228,7 +302,11 @@ a {
 .legend__item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  margin: 2px var(--space-2);        /* margins, not "gap", for older phones */
+}
+
+.legend__item .icon {
+  margin-right: 6px;
 }
 
 /* ---------- Sticky category tabs ---------- */
@@ -254,6 +332,13 @@ a {
 
 .category-tabs__list::-webkit-scrollbar {
   display: none;                     /* hide scrollbar (Chrome/Safari) */
+}
+
+/* Soft fade on the right edge while more tabs are hidden off-screen,
+   hinting that the strip scrolls. js/menu.js removes it at the end. */
+.category-tabs__list.has-more {
+  -webkit-mask-image: linear-gradient(to left, transparent, #000 40px);
+  mask-image: linear-gradient(to left, transparent, #000 40px);
 }
 
 .category-tabs__list li {
@@ -284,6 +369,13 @@ a {
   color: var(--color-text);
 }
 
+/* Mouse users (tablet/desktop) get a hover hint; phones skip this. */
+@media (hover: hover) {
+  .category-tabs__tab:hover {
+    color: var(--color-text);
+  }
+}
+
 /* 2px red underline under the active tab's text. */
 .category-tabs__tab.is-active::after {
   content: '';
@@ -303,33 +395,63 @@ a {
 }
 
 .menu-section {
-  padding-top: var(--space-6);
+  padding-top: var(--space-7);
+  scroll-snap-margin-top: var(--tabs-height);  /* same, for iPhone Safari before 14.1 */
   scroll-margin-top: var(--tabs-height);  /* heading lands just below the sticky tabs */
+}
+
+.menu-section:first-child {
+  padding-top: var(--space-6);
+}
+
+/* Gentle fade-in, switched on by js/menu.js only when motion is allowed. */
+.menu-section.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.menu-section.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Between categories: hairline + small line-art flame + hairline (uses .line-frame). */
+.menu-divider {
+  margin-bottom: var(--space-5);
+}
+
+.menu-divider__icon {
+  width: 22px;
+  height: 22px;
+  color: var(--color-ornament);
 }
 
 .menu-section:focus {
   outline: none;                     /* focus is only moved here for screen readers */
 }
 
-/* Uppercase, heavy and letter-spaced like "HOT WOK", followed by a short
-   thin line like the lines beside "Restaurant" in the logo. */
+/* Uppercase, heavy and letter-spaced like "HOT WOK"; the hairlines on both
+   sides come from .line-frame. */
 .menu-section__title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+  --frame-gap: var(--space-3);
   padding-bottom: var(--space-2);
+  padding-left: 0.1em;               /* balances the space letter-spacing adds after the last letter */
   font-size: 1.25rem;
   font-weight: 800;
   line-height: 1.3;
   letter-spacing: 0.1em;
+  text-align: center;
   text-transform: uppercase;
 }
 
-.menu-section__title::after {
-  content: '';
-  flex: 0 0 40px;
-  height: 1px;
-  background: var(--color-line-strong);
+/* Smallest phones (under 360px, e.g. 320px): slightly smaller headings so
+   long names like "Devilled Dishes" still fit on one line between the lines. */
+@media (max-width: 359px) {
+  .menu-section__title {
+    font-size: 1.125rem;
+    letter-spacing: 0.08em;
+  }
 }
 
 .no-results {
@@ -339,10 +461,13 @@ a {
 }
 
 /* ---------- Dish row (printed-menu style, not cards) ---------- */
+/* A row is [photo] [text]. The text needs at least 11em of width beside the
+   photo; normally there's plenty, but with very large text or page zoom it
+   drops below the photo instead of being squeezed. */
 .dish {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  column-gap: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--color-line);
 }
@@ -351,24 +476,50 @@ a {
   border-bottom: none;
 }
 
-/* In a category where any dish has a photo, every row keeps a photo-sized
-   column on the left, so names line up even when a row has no photo. */
-.menu-section--with-photos .dish {
-  grid-template-columns: var(--thumb-size) minmax(0, 1fr);
-}
-
-.menu-section--with-photos .dish__body {
-  grid-column: 2;
-}
-
 .dish__body {
-  grid-row: 1;
-  min-width: 0;                      /* lets long names wrap instead of overflowing */
+  flex: 1 1 0;
+  min-width: 11em;                   /* fallback for older browsers */
+  min-width: min(11em, 100%);
+}
+
+/* Photo (or, for rows without one in a photo category, an empty spacer of
+   the same width so names line up). Placed first, left of the text. */
+.dish__photo,
+.dish__photo-spacer {
+  order: -1;
+  flex: 0 0 var(--thumb-size);
+  margin-right: 14px;
 }
 
 .dish__photo {
-  grid-column: 1;
-  grid-row: 1;
+  margin-bottom: var(--space-2);     /* only noticeable if the text drops below it */
+}
+
+/* One line: [name side] [price]. The name side keeps at least 7em of width;
+   at normal text sizes that always leaves room for the price, even at 320px.
+   Only with very large text (e.g. phone text size 200%) does the price
+   drop onto its own line, right-aligned — instead of running off the screen. */
+.dish__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.dish__main {
+  flex: 1 1 0;
+  min-width: 7em;                    /* fallback for older browsers */
+  min-width: min(7em, 100%);         /* …but never wider than the row itself */
+  margin-right: var(--space-3);      /* space before the price */
+}
+
+.dish__price,
+.dish__prices {
+  flex: 0 0 auto;
+  max-width: 100%;                   /* never wider than the row */
+  margin-left: auto;                 /* stays right-aligned, also if it drops a line */
+}
+
+.dish__photo {
   width: var(--thumb-size);
   height: var(--thumb-size);
   object-fit: cover;
@@ -376,26 +527,50 @@ a {
   background: var(--color-surface);
 }
 
-/* Name on the left, price on the right, on the same line. */
-.dish__header {
+/* Name, then a dotted leader filling the space up to the price. */
+.dish__title {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
+  align-items: baseline;
+  min-width: 0;
 }
 
 .dish__name {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 1.0625rem;              /* 17px */
   font-weight: 600;
   line-height: 1.35;
 }
 
+/* Fine-dining dotted leader. It is a row of small full stops, so the dots sit
+   exactly on the text baseline. It takes only leftover space: with a long
+   name it shrinks to nothing instead of pushing the price down.
+   direction: rtl makes any cut-off happen next to the name, so the dots
+   always end neatly just before the price. */
+.dish__leader {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: var(--space-2);
+  overflow: hidden;
+  overflow: clip;
+  direction: rtl;
+  white-space: nowrap;
+  color: var(--color-leader);
+  font-size: 0.6875rem;
+  letter-spacing: 3px;
+  line-height: 1;
+  user-select: none;
+}
+
 /* Little icons after the name (spicy / veg / chef's special). */
 .dish__icons {
   display: inline-flex;
-  gap: 4px;
-  margin-left: 6px;
+  margin-left: 2px;
   vertical-align: -2px;
+}
+
+.dish__icons .icon {
+  margin-left: 4px;                  /* (margins, not flex "gap", for older phones) */
 }
 
 /* Prices are deliberately quiet: soft white, normal weight, a little smaller
@@ -428,6 +603,11 @@ a {
   font-size: 0.875rem;
 }
 
+/* Only when space is extremely tight (huge text): "Rs." may sit above the number. */
+.dish__prices dd {
+  white-space: normal;
+}
+
 .price__currency {
   color: var(--color-text-muted);
   font-size: 0.8125rem;
@@ -436,12 +616,14 @@ a {
 /* Two sizes in a category with photos: the photo column leaves too little
    room beside the name, so show name on top, then a small left-aligned
    price table. (Rows without a photo there are indented too, so same rule.) */
-.menu-section--with-photos .dish--two-sizes .dish__header {
-  flex-direction: column;
-  gap: var(--space-1);
+.menu-section--with-photos .dish--two-sizes .dish__leader {
+  display: none;                     /* no price beside the name to lead to */
 }
 
 .menu-section--with-photos .dish--two-sizes .dish__prices {
+  flex-basis: 100%;                  /* always its own line, under the name */
+  justify-content: start;
+  margin-top: var(--space-1);
   column-gap: var(--space-3);
   text-align: left;
 }
@@ -463,7 +645,9 @@ a {
 }
 
 /* Sold out: fade the dish, but keep the label itself fully readable. */
-.dish--sold-out .dish__header,
+.dish--sold-out .dish__title,
+.dish--sold-out .dish__price,
+.dish--sold-out .dish__prices,
 .dish--sold-out .dish__description,
 .dish--sold-out .dish__photo {
   opacity: 0.45;
@@ -516,6 +700,15 @@ a {
   text-align: center;
 }
 
+/* Thin-line wok with rising steam (viewBox 64×40). */
+.site-footer__art {
+  display: block;
+  width: 100px;
+  height: 62.5px;
+  margin: 0 auto var(--space-5);
+  color: var(--color-ornament);
+}
+
 .site-footer__block {
   margin-bottom: var(--space-5);
 }
@@ -533,9 +726,14 @@ a {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
   max-width: 320px;
   margin: 0 auto var(--space-6);
+}
+
+/* "—— Prices may change without notice ——" as a quiet closing mark. */
+.site-footer__closing {
+  --frame-line: 32px;
+  margin-bottom: var(--space-2);
 }
 
 .site-footer__small {
@@ -566,6 +764,7 @@ a {
 }
 
 .text-link {
+  margin-top: var(--space-2);        /* space below the Call button */
   display: inline-flex;
   align-items: center;
   min-height: var(--tap-size);
@@ -581,6 +780,7 @@ a {
 .back-to-top {
   position: fixed;
   right: var(--space-4);
+  bottom: var(--space-4);            /* fallback for browsers without env() */
   bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   z-index: 20;
   display: flex;
@@ -614,5 +814,11 @@ a {
     animation: none !important;
     transition: none !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Backup in case the fade-in class is ever set: always fully visible. */
+  .menu-section.reveal {
+    opacity: 1;
+    transform: none;
   }
 }

@@ -38,6 +38,12 @@ export function createElement(tag, className, text) {
   return element;
 }
 
+// Remove everything inside an element. (Same as element.replaceChildren(),
+// which older phones — Chrome before 86, Safari before 14 — don't have.)
+export function clearElement(element) {
+  element.textContent = '';
+}
+
 // localStorage can be unavailable (private mode, full storage, blocked),
 // so every read/write is wrapped in try/catch and fails quietly.
 export function storageGet(key) {

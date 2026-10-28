@@ -76,7 +76,9 @@ hot-wok-menu/
 
 ## Testing checklist (use at the end of each phase)
 
-- Chrome DevTools device mode: 360px Android and iPhone sizes.
+- Chrome DevTools device mode: 320–430px phones, 768px tablet, 1280px+ desktop, and phones in landscape.
+- Phone text size at 200% (and iPhone "aA" page zoom): nothing overlaps, is cut off, or scrolls sideways.
+- Older phones: avoid newer JS/CSS without a fallback (e.g. `replaceChildren()`, flex `gap`, `min()`); see the comments in `css/style.css`.
 - Network throttling "Slow 4G" / "3G".
 - Open on a real phone via GitHub Pages (or local network) when possible.
 - Admin: wrong PIN rejected, correct PIN works, changes appear on the customer menu after refresh.

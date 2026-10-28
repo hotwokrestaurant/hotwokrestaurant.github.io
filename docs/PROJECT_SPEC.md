@@ -168,8 +168,10 @@ Body shape: `{ "action": "...", "pin": "1234", "data": { ... } }`
 2. **Search box** — slim input with a search icon; filters by item name/description live; shows "No dishes found". Scrolls away with the header. Below it, a small icon key (Spicy / Vegetarian / Chef's special).
 3. **Sticky category tabs** (horizontal scroll, plain uppercase text, active tab = white text + 2px red underline). Tapping scrolls to the section; the active tab highlights while scrolling (IntersectionObserver) and scrolls into view.
 4. **Sections per category** as a printed-menu style list (no cards):
-   - Name on the left and price (`Rs. 1,200`) right-aligned on the same line; if `price_large`, two aligned lines "Regular Rs. 1,200" / "Large Rs. 1,600".
+   - Name on the left, a fine dotted leader, and price (`Rs. 1,200`) right-aligned on the same line. The leader shrinks to nothing for long names; the price never wraps.
+   - If `price_large`: a "Regular / Large" block on the right, spanning beside the name and description (the description sits directly under the name).
    - Description below (max 2 lines). Thin divider between rows.
+   - Category headings, dividers (line + small flame + line), the tagline and the footer's "Prices may change" note are framed by hairlines echoing the lines beside "Restaurant" in the logo. The tagline only gets lines when it fits on one line with them.
    - Small inline SVG icons after the name: flame (spicy), leaf (veg), star (chef's special), each with a visually hidden text label.
    - Photo (if any) as a 72px rounded thumbnail on the left, lazy-loaded with fixed size. If any dish in a category has a photo, rows without one keep the same indent.
    - Sold-out items: hidden, or faded with "Sold out today" if `show_sold_out` is TRUE.
@@ -185,7 +187,8 @@ Body shape: `{ "action": "...", "pin": "1234", "data": { ... } }`
 ### Visual style
 - Dark, minimal, premium — matches the black/white/red logo. **Dark theme only** (no light/dark switching).
 - Colours (CSS variables in `css/style.css`): background `#0b0b0b`, surface `#151515` (only where needed), text `#f5f5f5`, secondary text `#a3a3a3`, thin dividers in low-opacity white.
-- **Red is the only accent**: `#e7190c` (sampled from the logo), used only for brand accents: active tab underline, spicy flame icon, focus ring, pressed Call button. Never for text (it is 4.26:1 on the background, below WCAG AA's 4.5:1 for text).
+- **Red is the only brand accent**: `#e7190c` (sampled from the logo), used only for the active tab underline, spicy flame icon, focus ring and pressed Call button. Never for text (it is 4.26:1 on the background, below WCAG AA's 4.5:1 for text).
+- **Icon colours carry meaning** (dish rows and the icon key use the same colours): spicy flame = logo red `#e7190c`; vegetarian leaf = soft green `#5dbb63` (8.2:1); chef's special star = soft off-white `#e0e0e0`. All exceed the 3:1 needed for icons. Only icons are coloured, never dish names, prices or rows. Meaning never relies on colour alone: each icon has a distinct shape and a hidden text label.
 - **Prices are deliberately understated** so attention goes to the food, not the cost: soft white `#e0e0e0`, weight 500, slightly smaller than the dish name, tabular numbers, right-aligned. The "Rs." prefix is smaller and grey; "Regular/Large" labels are grey.
 - No gold, gradients, glows, heavy shadows, card grids or emojis.
 - Font: **Montserrat** from Google Fonts (weights 500, 600, 800 only, `display=swap`) with a system-font fallback. Category headings uppercase, 800, letter-spaced. No script fonts outside the logo image.

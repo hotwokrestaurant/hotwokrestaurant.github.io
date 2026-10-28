@@ -2,7 +2,7 @@
 // Phase 1 uses local sample data. In Phase 3 this will come from the Apps Script API.
 
 import { SAMPLE_MENU } from './sample-data.js';
-import { formatAmount, toBool, toPositiveNumber, normalizeText, createElement } from './utils.js';
+import { formatAmount, toBool, toPositiveNumber, normalizeText, createElement, clearElement } from './utils.js';
 
 // Only simple image file names are allowed, e.g. "chicken-kottu.webp".
 const IMAGE_NAME_PATTERN = /^[a-z0-9_-]+\.(webp|jpg|jpeg|png)$/i;
@@ -47,17 +47,34 @@ function renderHeader(settings) {
   }
 
   const tagline = document.getElementById('tagline');
-  tagline.textContent = settings.tagline || '';
+  // Text goes in a <span> so the framing lines can shrink around it (see .line-frame).
+  clearElement(tagline);
+  tagline.append(createElement('span', '', settings.tagline || ''));
   tagline.hidden = !settings.tagline;
+  fitTaglineFrame();
 
   const notice = document.getElementById('notice');
   notice.textContent = settings.notice || '';
   notice.hidden = !settings.notice;
 }
 
+// The tagline gets thin lines on both sides ("—— text ——") only when it
+// still fits on ONE line with them. If the lines would squeeze it onto two
+// lines, they're dropped and it's shown as plain centred text instead.
+// (The tagline comes from the owner's settings, so its length can vary.)
+function fitTaglineFrame() {
+  const tagline = document.getElementById('tagline');
+  if (tagline.hidden) return;
+  tagline.classList.add('line-frame');
+  const lineHeight = parseFloat(getComputedStyle(tagline).lineHeight);
+  if (tagline.clientHeight > lineHeight * 1.5) {
+    tagline.classList.remove('line-frame');
+  }
+}
+
 function renderCategoryTabs(groups) {
   const list = document.getElementById('category-tabs');
-  list.replaceChildren();
+  clearElement(list);
 
   groups.forEach((group, index) => {
     const listItem = createElement('li');
@@ -71,52 +88,74 @@ function renderCategoryTabs(groups) {
 
 function renderSections(groups) {
   const container = document.getElementById('menu-sections');
-  container.replaceChildren();
+  clearElement(container);
 
   groups.forEach((group, index) => {
     const section = createElement('section', 'menu-section');
     // If any dish here has a photo, every row keeps a photo column so names line up.
-    section.classList.toggle('menu-section--with-photos', group.items.some(hasPhoto));
+    const sectionHasPhotos = group.items.some(hasPhoto);
+    section.classList.toggle('menu-section--with-photos', sectionHasPhotos);
     section.id = `cat-${index}`;
     section.tabIndex = -1; // lets us move keyboard focus here after a tab click
 
-    const heading = createElement('h2', 'menu-section__title', group.name);
+    // Between categories: hairline + small line-art flame + hairline (decoration only).
+    if (index > 0) {
+      const divider = createElement('div', 'menu-divider line-frame');
+      divider.append(createIcon('flame-line', 'menu-divider__icon'));
+      section.append(divider);
+    }
+
+    const heading = createElement('h2', 'menu-section__title line-frame');
+    heading.append(createElement('span', '', group.name)); // span: see .line-frame
     heading.id = `cat-${index}-title`;
     section.setAttribute('aria-labelledby', heading.id);
     section.append(heading);
 
-    group.items.forEach((item) => section.append(createDishCard(item)));
+    group.items.forEach((item) => section.append(createDishCard(item, sectionHasPhotos)));
     container.append(section);
   });
 }
 
-function createDishCard(item) {
+// Row layout:
+//   .dish__line   = [ .dish__main (name + dotted leader) ] [ price ]
+//   description   = under the whole line, full width
+// Two sizes (in a category without photos): the description goes INSIDE
+// .dish__main instead, so it sits right under the name, beside the
+// Regular/Large block. In categories with photos, the CSS moves a
+// Regular/Large block under the name instead (see style.css).
+function createDishCard(item, sectionHasPhotos) {
   const isAvailable = toBool(item.available);
   const card = createElement('article', isAvailable ? 'dish' : 'dish dish--sold-out');
   // Text used by the search box (name + description, lower-case).
   card.dataset.search = normalizeText(`${item.name} ${item.description || ''}`);
 
-  // Top line: name (+ icons) on the left, price on the right.
   const name = createElement('h3', 'dish__name', item.name);
   const icons = createDishIcons(item);
   if (icons) name.append(icons);
 
-  const header = createElement('div', 'dish__header');
-  header.append(name);
-  const price = createPrice(item);
-  if (price) header.append(price);
+  const title = createElement('div', 'dish__title');
+  title.append(name);
 
-  // Marks Regular/Large rows; in categories with photos the CSS moves
-  // these prices under the name so the name isn't squeezed.
-  if (price && price.classList.contains('dish__prices')) {
-    card.classList.add('dish--two-sizes');
-  }
+  const price = createPrice(item);
+  if (price) title.append(createLeader());
+
+  const isTwoSizes = Boolean(price) && price.classList.contains('dish__prices');
+  if (isTwoSizes) card.classList.add('dish--two-sizes');
+
+  const main = createElement('div', 'dish__main');
+  main.append(title);
+
+  const line = createElement('div', 'dish__line');
+  line.append(main);
+  if (price) line.append(price);
 
   const body = createElement('div', 'dish__body');
-  body.append(header);
+  body.append(line);
 
   if (item.description) {
-    body.append(createElement('p', 'dish__description', item.description));
+    const description = createElement('p', 'dish__description', item.description);
+    if (isTwoSizes && !sectionHasPhotos) main.append(description);
+    else body.append(description);
   }
 
   if (!isAvailable) {
@@ -127,8 +166,17 @@ function createDishCard(item) {
 
   const photo = createDishPhoto(item);
   if (photo) card.append(photo);
+  // In a category with photos, a row without one gets an empty photo-sized
+  // spacer, so its name lines up with the others (see .dish in style.css).
+  else if (sectionHasPhotos) card.append(createPhotoSpacer());
 
   return card;
+}
+
+function createPhotoSpacer() {
+  const spacer = createElement('div', 'dish__photo-spacer');
+  spacer.setAttribute('aria-hidden', 'true');
+  return spacer;
 }
 
 // One size:  <p>Rs. 1,200</p>
@@ -152,6 +200,16 @@ function createPrice(item) {
     list.append(row);
   });
   return list;
+}
+
+// The dotted line between name and price, made of small full stops.
+// Hidden from screen readers — it is decoration only.
+const LEADER_DOTS = '.'.repeat(160);
+
+function createLeader() {
+  const leader = createElement('span', 'dish__leader', LEADER_DOTS);
+  leader.setAttribute('aria-hidden', 'true');
+  return leader;
 }
 
 // "Rs. 1,200" as two pieces, so "Rs." can be smaller and grey and the number reads first.
@@ -206,7 +264,8 @@ function createDishPhoto(item) {
   img.height = 72;
   img.loading = 'lazy';
   img.decoding = 'async';
-  img.addEventListener('error', () => img.remove()); // missing file → just no photo
+  // Missing file → no photo, but keep the space so the row stays aligned.
+  img.addEventListener('error', () => img.replaceWith(createPhotoSpacer()));
   return img;
 }
 
@@ -287,12 +346,49 @@ function setActiveTab(sectionId) {
   });
 }
 
+// Gently fade each category in the first time it scrolls onto the screen.
+// Skipped entirely when the phone's "reduce motion" setting is on, or when
+// the browser lacks IntersectionObserver — then everything is simply visible.
+function setupSectionReveal() {
+  if (scrollBehavior === 'auto' || !('IntersectionObserver' in window)) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('is-visible');
+      observer.unobserve(entry.target); // only fade in once
+    });
+  });
+
+  document.querySelectorAll('.menu-section').forEach((section) => {
+    section.classList.add('reveal');
+    observer.observe(section);
+  });
+}
+
 // Slide the tab strip sideways so the active tab is centred.
 // (We scroll only the strip, not the page, so the user's scrolling isn't interrupted.)
 function scrollTabIntoView(tab) {
   const strip = tab.closest('.category-tabs__list');
   const left = tab.offsetLeft - (strip.clientWidth - tab.offsetWidth) / 2;
   strip.scrollTo({ left, behavior: scrollBehavior });
+}
+
+// Fade the right edge of the tab strip only while more tabs are hidden to
+// the right — a hint that it scrolls. Re-checked when the strip scrolls,
+// the screen size changes, or search hides some tabs.
+function setupTabStripFade() {
+  const strip = document.getElementById('category-tabs');
+  strip.addEventListener('scroll', updateTabStripFade, { passive: true });
+  window.addEventListener('resize', updateTabStripFade, { passive: true });
+  updateTabStripFade();
+}
+
+function updateTabStripFade() {
+  const strip = document.getElementById('category-tabs');
+  // A couple of pixels of slack, because scroll positions can be fractional.
+  const hasMore = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 2;
+  strip.classList.toggle('has-more', hasMore);
 }
 
 // Live search: hide dishes that don't match, and hide empty categories.
@@ -320,6 +416,7 @@ function applySearch(query) {
   });
 
   document.getElementById('no-results').hidden = totalMatches > 0;
+  updateTabStripFade();
 }
 
 // Show the "back to top" button once the user has scrolled down a bit.
@@ -352,9 +449,18 @@ function renderMenu(data) {
   renderFooter(settings);
   document.getElementById('menu').setAttribute('aria-busy', 'false');
   setupActiveTabTracking();
+  setupSectionReveal();
+  setupTabStripFade();
 }
 
 function init() {
+  // Re-check the tagline lines when the screen size changes, and once
+  // Montserrat has loaded (it is wider than the fallback font).
+  window.addEventListener('resize', fitTaglineFrame, { passive: true });
+  if (document.fonts) {
+    document.fonts.load('500 1em Montserrat').then(fitTaglineFrame, () => {});
+  }
+
   setupTabClicks();
   setupSearch();
   setupBackToTop();
