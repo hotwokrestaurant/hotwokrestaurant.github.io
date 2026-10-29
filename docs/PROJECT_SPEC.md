@@ -22,7 +22,7 @@ Online ordering, payments, table numbers, customer accounts, reviews, delivery, 
 
 ```
 Customer phone ──scan QR──► index.html  (GitHub Pages)
-                                │ 1 read: getDoc(menu/published)   [Firestore Lite SDK]
+                                │ 1 read: REST GET menu/published   [plain fetch(), no SDK]
                                 ▼
                     Cloud Firestore  (Spark free plan, asia-south1)
                        ▲    protected by firebase/firestore.rules
@@ -129,34 +129,40 @@ Stored in `firebase/menu-seed.json` and loaded with `firebase/setup.html`.
 
 ## 4. Firebase access
 
-### 4.1 SDK loading (no build step)
-- Firebase **modular SDK** as ES module imports from Google's official CDN, **pinned to one version** in every URL: `https://www.gstatic.com/firebasejs/12.19.0/<file>.js`. Upgrade by changing every URL together and re-testing.
-- **Customer page:** `firebase-app.js` + **`firebase-firestore-lite.js`** only (small; read-only; no Auth).
-- **Admin page:** `firebase-app.js` + `firebase-firestore.js` + `firebase-auth.js`.
+### 4.1 How each page talks to Firebase (no build step)
+- **Customer page: no Firebase SDK.** It reads the public document with one plain `fetch()` to the Firestore REST API:
+  `GET https://firestore.googleapis.com/v1/projects/<projectId>/databases/(default)/documents/menu/published?key=<apiKey>`
+  - The response is about 1.9 KB compressed, instead of about 61 KB of SDK code.
+  - It's a simple GET, so the browser skips its extra CORS check request.
+  - Firestore allows the `hotwokrestaurant.github.io` origin.
+  - The security rules apply as for any signed-out visitor.
+  - A small converter in `js/api.js` turns Firestore's typed values back into plain values: `stringValue`, `integerValue` (sent as text, converted to a number), `doubleValue`, `booleanValue`, `nullValue`, `timestampValue` (converted to milliseconds), `arrayValue`, `mapValue` (keys sorted).
+- **Admin page:** Firebase **modular SDK** as ES module imports from Google's official CDN, **pinned to one version** in every URL: `https://www.gstatic.com/firebasejs/12.19.0/<file>.js` (`firebase-app.js` + `firebase-firestore.js` + `firebase-auth.js`). Upgrade by changing every URL together and re-testing.
 - Config (`FIREBASE_CONFIG`) and the document path (`MENU_COLLECTION` / `MENU_DOC_ID`) live in `js/config.js`. The web config is not a secret.
 
 ### 4.2 Customer reads (Phase 3, `js/api.js` + `js/menu.js`)
 1. On load, render the **saved** menu from `localStorage` (key `hotwok.menu.v1`: `{ menu, updatedAt }`, `updatedAt` in milliseconds) immediately, if one exists. Otherwise the skeleton stays.
-2. The Firebase SDK (app + Firestore Lite) is loaded with a **dynamic `import()`** only when fetching, so it never delays the saved menu or the skeleton. `index.html` preconnects to gstatic and Firestore, and `modulepreload`s the page's own helper modules.
-3. Fetch with one `getDoc(doc(db, 'menu', 'published'))` (= 1 read per visit), with a **timeout**: 20 s on a first visit, 10 s when a saved menu is already shown (`js/config.js`).
+2. Fetch the latest menu with **one REST `fetch()`** (see 4.1; = 1 read per visit). Nothing has to download first, so it never delays the saved menu or the skeleton. `index.html` preconnects to Firestore and `modulepreload`s the page's own helper modules.
+3. A **timeout** covers the whole download and cancels it (`AbortController`): 20 s on a first visit, 10 s when a saved menu is already shown (`js/config.js`).
 4. On success: redraw **only if the menu changed** (`updatedAt` differs, or the contents differ, which catches hand edits in the Firebase console that don't touch `updatedAt`), and save to `localStorage` (try/catch). A redraw keeps any search text and skips the fade-in.
 5. On failure (offline, timeout, missing/invalid data): with a saved menu, show the small note "Showing saved menu · updated 29 Oct"; with none, show a friendly message with **Try again** and **Call us** (number from `FALLBACK_PHONE` in `js/config.js`). When the phone comes back online, the menu quietly retries.
 6. Filtering stays in the browser: only `visible` categories; only `available` items unless `show_sold_out`.
 7. **No sample data in the live site.** All text, including the "Sample menu – prices are placeholders" notice, comes from `settings` in Firestore. `js/sample-data.js` was removed in Phase 3; `firebase/menu-seed.json` is the reference data.
 8. A fully offline **first** page load can't work without a service worker (not in v1). "Offline" here means the page itself loaded (from the network or the browser's cache) but Firestore couldn't be reached.
 
-Measured (headless Chrome against the live project, 412px wide):
+Measured (headless Chrome against the live project, 412px wide). The REST fetch replaced Firestore Lite because it was clearly faster on first visits and behaved the same in every failure test:
 
-| Scenario | Menu visible |
-|---|---|
-| First visit, normal connection | 2.5 s (skeleton at 0.1 s) |
-| Repeat visit | 0.1 s (from the saved copy) |
-| Slow 3G, first visit | 12.0 s (skeleton at 2.2 s) |
-| Slow 3G, repeat visit, no browser cache | 5.5 s (saved copy; page files took the rest) |
-| Firestore unreachable, saved copy | 0.1 s + note |
-| Firestore unreachable, nothing saved | error message at 0.9 s |
-| Firestore not answering, saved copy | 0.1 s; note at 10 s |
-| Firestore not answering, nothing saved | error message at 21 s |
+| Scenario | Firestore Lite SDK | **REST fetch (current)** |
+|---|---|---|
+| First visit, normal connection | 2.5 s | **1.0–1.2 s** |
+| Repeat visit | 0.1 s (saved copy) | **0.1 s** (saved copy) |
+| Slow 3G, first visit (3 runs) | 12.0–12.4 s | **7.7–8.2 s** |
+| Slow 3G, repeat visit, no browser cache (3 runs) | 5.5–5.6 s | **5.5–5.6 s** (saved copy; page files take the time) |
+| Firestore unreachable, saved copy | 0.1 s + note | **0.1 s + note** |
+| Firestore unreachable, nothing saved | error at 0.9 s | **error at 0.5–0.8 s** |
+| Firestore not answering, saved copy | note at 10 s | **note at 10 s** |
+| Firestore not answering, nothing saved | error at 21 s | **error at 21 s** |
+| Saved copy out of date (same `updatedAt`) | corrected | **corrected** |
 
 ### 4.3 Owner writes (Phase 4): never overwrite the menu
 The admin page **never** writes the whole document with `setDoc`. Every change (toggle sold out, edit, add, delete, reorder, settings) is a **transaction that updates only the field it changes**:
@@ -295,7 +301,7 @@ Work through these in order. Stop after each phase for review.
 |---|---|---|
 | **1. Static customer menu** | `index.html`, `css/style.css`, `js/menu.js`, `js/utils.js` using local sample data (`js/sample-data.js`, removed in Phase 3) | Looks good at 360px; tabs, search and badges work |
 | **2. Firebase backend** | `firebase/firestore.rules`, `firebase/menu-seed.json`, `firebase/setup.html` (+ `.js`, `.css`), `firebase/README.md`, `js/config.js` (config placeholders) | Project created on Spark; rules published; seed loaded; signed-out read works, signed-out write rejected, owner write works |
-| **3. Connect customer menu** | `js/api.js` (Firestore Lite `getDoc` of `menu/published`), `js/menu.js` wired to it; localStorage cache-first + background refresh; error states | Menu loads from Firestore with 1 read per visit; shows the cached menu instantly and when offline |
+| **3. Connect customer menu** | `js/api.js` (one Firestore REST `fetch()` of `menu/published` + typed-value converter; replaced Firestore Lite after measuring), `js/menu.js` wired to it; localStorage cache-first + background refresh; error states | Menu loads from Firestore with 1 read per visit; shows the cached menu instantly and when offline |
 | **4. Admin page** | `admin.html`, `css/admin.css`, `js/admin.js` (Firebase Auth email/password + Firestore transactions with field-level `tx.update`, see 4.3); "Download backup" button; "Load from a backup file" in `firebase/setup.html` (see 4.7) | Owner can log in (and stays logged in), toggle sold out, edit, add, delete and reorder on a phone; two phones editing different dishes at once keep both changes; invalid data is rejected by the rules; a downloaded backup restores correctly |
 | **5. Home-screen install** | `manifest.json`, icons | "Add to Home screen" shows proper name and icon |
 | **6. Deploy** | GitHub Pages live at https://hotwokrestaurant.github.io/; URL in README | Works on real Android + iPhone over mobile data; `/firebase/setup.html` returns 404; the "Before going live" checklist in `firebase/README.md` is complete |

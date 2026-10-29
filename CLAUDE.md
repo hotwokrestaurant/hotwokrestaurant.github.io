@@ -33,7 +33,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 | Database | **Cloud Firestore** (Firebase **Spark free plan**, region `asia-south1`). The whole published menu is ONE document, `menu/published`. |
 | Owner login | **Firebase Authentication**, email/password. Owner account created manually in the console; no sign-up flow. Allow-list: `admins/{uid}` documents. |
 | Backend logic | None — no server code. Security and validation live in `firebase/firestore.rules`. |
-| Firebase SDK | Modular SDK as ES modules from the official CDN, **pinned**: `https://www.gstatic.com/firebasejs/12.19.0/…`. Customer page: **Firestore Lite** (read-only, small). Admin page: full Firestore + Auth. |
+| Firebase access | **Customer page: no SDK.** One plain `fetch()` to the Firestore REST API for the public `menu/published` document, with a small converter for Firestore's typed JSON (`js/api.js`). **Admin page:** modular Firebase SDK (Firestore + Auth) as ES modules from the official CDN, **pinned**: `https://www.gstatic.com/firebasejs/12.19.0/…`. |
 | Hosting | GitHub Pages (organization site), served at https://hotwokrestaurant.github.io/ |
 | Tooling only (not shipped) | Node.js scripts allowed for dev tasks, e.g. QR code generation |
 
@@ -44,7 +44,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 3. **All validation happens in `firebase/firestore.rules`** (types, sizes, allowed fields, known categories), even if the frontend also validates. Limits that come from how rules work (no loops, max 1,000 steps per request): a save may add/change **at most 3 dishes**, and a save that changes the **categories** can't also change dishes. Rules are tested in the Firestore emulator before every change.
 4. **Never insert user/database data with `innerHTML`.** Use `textContent` / `createElement` to prevent XSS.
 5. **Mobile-first.** Design for ~360px wide Android phones on slow mobile data first. Touch targets ≥ 44px. Base font ≥ 16px.
-6. **Fast and light.** Customer page should be usable quickly on 3G. Images in `.webp`, ideally under 100 KB each. No heavy libraries. The only external requests allowed are the Montserrat Google Font, the pinned Firebase SDK from gstatic, and Firebase itself (see Tech stack).
+6. **Fast and light.** Customer page should be usable quickly on 3G. Images in `.webp`, ideally under 100 KB each. No heavy libraries. The only external requests allowed are the Montserrat Google Font, Firestore's REST API (customer page), and the pinned Firebase SDK from gstatic + Firebase itself (admin page only). See Tech stack.
 7. **Graceful failure.** If Firestore can't be reached, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
 8. **Prices** are stored as whole-rupee integers (LKR) and displayed as `Rs. 1,250`.
 9. **Wrap all `localStorage` access in try/catch** — it can be unavailable.
@@ -52,7 +52,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 11. **Brand look (customer menu):** dark theme only, black/white plus the logo red as the single accent colour. See "Visual style" in `docs/PROJECT_SPEC.md`.
 12. **No `Co-Authored-By` lines** (or any other AI attribution) in suggested commit messages.
 13. **No photo uploads.** The admin page never handles images. Dish photos, if ever added, are put in `images/` by the developer; the `image` field stays optional.
-14. **Customer page = Firestore Lite only** (one `getDoc` per visit, no Auth SDK). Keep the Firebase SDK version identical in every import URL.
+14. **Customer page = no Firebase SDK.** It reads `menu/published` with one REST `fetch()` per visit (measured ~4 s faster on Slow 3G than Firestore Lite). Don't add SDK imports to the customer page. On the admin page, keep the Firebase SDK version identical in every import URL.
 15. **Admin writes never overwrite the menu document.** Every change is a `runTransaction` that reads the latest menu and `tx.update`s only the changed field (`items`, `settings` or `categories`) plus `updatedAt`. Never `setDoc` from the admin page (see spec 4.3).
 16. **Developer-only files are not published.** `_config.yml` excludes `firebase/`, `docs/`, `tools/`, `CLAUDE.md`, `README.md` from GitHub Pages. Never add `.nojekyll`. New developer-only folders must be added to that list.
 
@@ -69,7 +69,7 @@ hotwokrestaurant.github.io/  ← repo root (the local folder may still be called
 ├── css/style.css            ← shared styles (CSS variables)
 ├── css/admin.css            ← admin-only styles
 ├── js/config.js             ← Firebase web config + menu document path (no secrets)
-├── js/api.js                ← customer menu loading (Firestore Lite) + localStorage cache
+├── js/api.js                ← customer menu loading (Firestore REST fetch) + localStorage cache
 ├── js/menu.js               ← customer menu rendering
 ├── js/admin.js              ← admin logic (Firestore + Auth)
 ├── js/utils.js              ← formatPrice, escaping helpers, storage helpers
