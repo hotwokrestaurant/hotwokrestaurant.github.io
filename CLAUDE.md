@@ -71,7 +71,9 @@ hotwokrestaurant.github.io/  ← repo root (the local folder may still be called
 ├── js/config.js             ← Firebase web config + menu document path (no secrets)
 ├── js/api.js                ← customer menu loading (Firestore REST fetch) + localStorage cache
 ├── js/menu.js               ← customer menu rendering
-├── js/admin.js              ← admin logic (Firestore + Auth)
+├── js/admin.js              ← admin screens and UI logic
+├── js/admin-firebase.js     ← every admin Firebase call (login, live menu, transaction saves)
+├── js/admin-strings.js      ← ALL admin UI text (English; add Sinhala here later)
 ├── js/utils.js              ← formatPrice, escaping helpers, storage helpers
 ├── images/                  ← dish photos (.webp), icons, logo
 ├── firebase/firestore.rules ← security rules (pasted into the console)

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en" class="admin-page">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Hot Wok – Menu Manager</title>
+  <meta name="theme-color" content="#0b0b0b">
+  <meta name="color-scheme" content="dark">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script type="module" src="js/admin.js"></script>
+</head>
+<body>
+  <!-- All visible text is filled in from js/admin-strings.js (data-i18n="key"). -->
+
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+  <p id="offline-banner" class="offline-banner" role="status" data-i18n="offlineBanner" hidden></p>
+
+  <!-- Screen: loading -->
+  <section id="screen-loading" class="screen screen--center">
+    <span class="spinner spinner--large" aria-hidden="true"></span>
+    <p data-i18n="loading"></p>
+  </section>
+
+  <!-- Screen: log in -->
+  <section id="screen-login" class="screen" hidden>
+    <img class="admin-logo" src="images/logo.webp" alt="Hot Wok Restaurant" width="464" height="180">
+    <h1 class="screen__title" data-i18n="appName"></h1>
+    <p class="screen__intro" data-i18n="loginIntro"></p>
+
+    <form id="login-form" class="form" novalidate>
+      <label class="form__label" for="login-email" data-i18n="emailLabel"></label>
+      <input id="login-email" class="form__input" type="email" autocomplete="username" inputmode="email" required>
+
+      <label class="form__label" for="login-password" data-i18n="passwordLabel"></label>
+      <input id="login-password" class="form__input" type="password" autocomplete="current-password" required>
+
+      <label class="check">
+        <input id="show-password" type="checkbox">
+        <span data-i18n="showPassword"></span>
+      </label>
+
+      <p id="login-error" class="form__error" role="alert" hidden></p>
+      <button id="login-button" class="btn btn--primary" type="submit" data-i18n="logIn"></button>
+    </form>
+
+    <button id="forgot-password" class="btn btn--link" type="button" data-i18n="forgotPassword"></button>
+    <p id="login-message" class="screen__message" role="status" hidden></p>
+  </section>
+
+  <!-- Screen: account isn't allowed, or something went wrong -->
+  <section id="screen-problem" class="screen" hidden>
+    <h1 id="problem-title" class="screen__title"></h1>
+    <p id="problem-text" class="screen__intro"></p>
+    <button id="problem-retry" class="btn btn--primary" type="button" data-i18n="tryAgain" hidden></button>
+    <button id="problem-logout" class="btn" type="button" data-i18n="logOut"></button>
+  </section>
+
+  <!-- Screen: the menu manager -->
+  <section id="screen-manager" class="screen screen--wide" hidden>
+    <header class="topbar">
+      <div>
+        <h1 class="topbar__title" data-i18n="appName"></h1>
+        <p id="logged-in-as" class="topbar__user"></p>
+      </div>
+      <button id="logout-button" class="btn btn--small" type="button" data-i18n="logOut"></button>
+    </header>
+
+    <div class="toolbar">
+      <label class="form__label" for="dish-search" data-i18n="searchLabel"></label>
+      <input id="dish-search" class="form__input" type="search" autocomplete="off" data-i18n-placeholder="searchPlaceholder">
+      <div class="toolbar__actions">
+        <button id="add-dish" class="btn btn--primary" type="button" data-i18n="addDish"></button>
+        <button id="order-mode" class="btn" type="button" aria-pressed="false" data-i18n="changeOrder"></button>
+      </div>
+      <p id="order-hint" class="toolbar__hint" data-i18n="orderHint" hidden></p>
+    </div>
+
+    <div id="dish-list" class="dish-list"></div>
+    <p id="no-matches" class="dish-list__empty" data-i18n="noMatches" hidden></p>
+
+    <section class="more" aria-labelledby="more-title">
+      <h2 id="more-title" class="more__title" data-i18n="moreTitle"></h2>
+      <button id="open-details" class="btn" type="button" data-i18n="detailsButton"></button>
+      <button id="download-backup" class="btn" type="button" data-i18n="backupButton"></button>
+      <p class="more__hint" data-i18n="backupHint"></p>
+      <a class="btn btn--link" href="./" target="_blank" rel="noopener" data-i18n="viewMenu"></a>
+    </section>
+  </section>
+
+  <!-- Full-screen form: add / edit a dish -->
+  <section id="screen-dish" class="sheet" role="dialog" aria-modal="true" aria-labelledby="dish-form-title" hidden>
+    <form id="dish-form" class="sheet__form" novalidate>
+      <h2 id="dish-form-title" class="sheet__title"></h2>
+
+      <label class="form__label" for="dish-name" data-i18n="nameLabel"></label>
+      <input id="dish-name" class="form__input" type="text" maxlength="60" autocomplete="off" required>
+
+      <label class="form__label" for="dish-category" data-i18n="categoryLabel"></label>
+      <select id="dish-category" class="form__input"></select>
+
+      <label class="form__label" for="dish-price" data-i18n="priceLabel"></label>
+      <input id="dish-price" class="form__input" type="text" inputmode="numeric" autocomplete="off" required>
+
+      <label class="form__label" for="dish-price-large" data-i18n="priceLargeLabel"></label>
+      <input id="dish-price-large" class="form__input" type="text" inputmode="numeric" autocomplete="off" aria-describedby="dish-price-large-hint">
+      <p class="form__hint" id="dish-price-large-hint" data-i18n="priceLargeHint"></p>
+
+      <label class="form__label" for="dish-description" data-i18n="descriptionLabel"></label>
+      <textarea id="dish-description" class="form__input form__textarea" rows="3" maxlength="150" aria-describedby="dish-description-count"></textarea>
+      <p class="form__count" id="dish-description-count" aria-live="polite"></p>
+
+      <label class="check"><input id="dish-spicy" type="checkbox"><span data-i18n="spicyLabel"></span></label>
+      <label class="check"><input id="dish-veg" type="checkbox"><span data-i18n="vegLabel"></span></label>
+      <label class="check"><input id="dish-featured" type="checkbox"><span data-i18n="featuredLabel"></span></label>
+
+      <p id="dish-error" class="form__error" role="alert" hidden></p>
+
+      <div class="sheet__actions">
+        <button id="dish-save" class="btn btn--primary" type="submit" data-i18n="save"></button>
+        <button id="dish-cancel" class="btn" type="button" data-i18n="cancel"></button>
+      </div>
+      <button id="dish-delete" class="btn btn--danger" type="button" data-i18n="deleteDish" hidden></button>
+    </form>
+  </section>
+
+  <!-- Full-screen form: restaurant details -->
+  <section id="screen-details" class="sheet" role="dialog" aria-modal="true" aria-labelledby="details-title" hidden>
+    <form id="details-form" class="sheet__form" novalidate>
+      <h2 id="details-title" class="sheet__title" data-i18n="detailsTitle"></h2>
+
+      <label class="form__label" for="set-notice" data-i18n="noticeLabel"></label>
+      <input id="set-notice" class="form__input" type="text" maxlength="120" aria-describedby="set-notice-hint">
+      <p class="form__hint" id="set-notice-hint" data-i18n="noticeHint"></p>
+
+      <label class="form__label" for="set-hours" data-i18n="hoursLabel"></label>
+      <textarea id="set-hours" class="form__input form__textarea" rows="2" maxlength="150"></textarea>
+
+      <label class="form__label" for="set-phone" data-i18n="phoneLabel"></label>
+      <input id="set-phone" class="form__input" type="tel" maxlength="30" autocomplete="off">
+
+      <label class="form__label" for="set-address" data-i18n="addressLabel"></label>
+      <textarea id="set-address" class="form__input form__textarea" rows="2" maxlength="150"></textarea>
+
+      <label class="form__label" for="set-map" data-i18n="mapLabel"></label>
+      <input id="set-map" class="form__input" type="url" maxlength="300" inputmode="url" autocomplete="off" aria-describedby="set-map-hint">
+      <p class="form__hint" id="set-map-hint" data-i18n="mapHint"></p>
+
+      <p id="details-error" class="form__error" role="alert" hidden></p>
+
+      <div class="sheet__actions">
+        <button id="details-save" class="btn btn--primary" type="submit" data-i18n="save"></button>
+        <button id="details-cancel" class="btn" type="button" data-i18n="cancel"></button>
+      </div>
+    </form>
+  </section>
+
+  <noscript><p class="noscript">Please turn on JavaScript to manage the menu.</p></noscript>
+</body>
+</html>

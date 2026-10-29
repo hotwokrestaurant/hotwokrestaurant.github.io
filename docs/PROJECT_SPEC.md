@@ -98,7 +98,7 @@ All eight keys must be present (use `''` for "none").
 
 ### 3.5 The owner allow-list: `admins/{uid}`
 
-One document per owner account; the document ID is the account's Firebase Auth **UID**. Example field: `name: "Owner"`. Created and removed by hand in the Firebase console. The apps can neither read nor write this collection.
+One document per owner account; the document ID is the account's Firebase Auth **UID**. Example field: `name: "Owner"`. Created and removed by hand in the Firebase console. A signed-in account may read **only its own** entry (so the admin page can say "This account can't edit the menu"); no app can list, create, change or delete entries.
 
 ### 3.6 Starting data (placeholder prices — replace with the real menu)
 
@@ -194,9 +194,9 @@ await runTransaction(db, async (tx) => {
   - Every **new or changed** dish fully validated: types, name ≤ 60, description ≤ 150, prices positive integers, category known, safe image name, no unknown fields.
 - **Why only changed data:** rules have no loops, so they can't check every dish in a long list. They compute `newItems.removeAll(oldItems)`, require at most 3 entries, and validate each. Settings and categories are likewise only checked when they differ from the saved copy. Every value is therefore validated when it's written.
 - **Why the limits are 3 dishes and "categories alone":** Firestore stops evaluating a rule after 1,000 steps. Measured in the emulator (with 18 and 150 dishes), every allowed save fits. Checking all 8 categories and several dishes in one save would not, so that combination is refused by an explicit rule.
-- **`admins` is read- and write-locked for every app** (`allow read, write: if false`). Only the Firebase console can change it, so an account created through the Auth API can't add itself. Public sign-up is also turned off in Authentication → Settings → User actions, where the console offers it.
+- **`admins` is write-locked for every app** (`allow list, write: if false`). A signed-in account can only `get` its own entry (`request.auth.uid == uid`), which the admin page uses after login. Only the Firebase console can change it, so an account created through the Auth API can't add itself. Public sign-up is also turned off in Authentication → Settings → User actions, where the console offers it.
 - No deletes of the menu document. Everything not matched is denied.
-- Tested in the Firestore emulator (60 checks, all passing, including the `admins` lockdown and simultaneous transactions) before handover; manual tests are in `firebase/README.md`.
+- Tested in the Firestore emulator (64 checks, all passing, including the `admins` lockdown, own-entry reads and simultaneous transactions) before handover; manual tests are in `firebase/README.md`.
 
 ### 4.5 Owner authentication
 - Email/password. The owner's account is created by hand in the console. **No sign-up flow** in the app (and "Enable create (sign-up)" is turned off in the console where available).
@@ -209,7 +209,7 @@ Not enabled in v1. reCAPTCHA would slow the customer page on 3G and can block re
 
 ### 4.7 Backups (no automatic backups on Spark)
 - **Phase 4:** a **"Download backup"** button in the admin page saves `menu/published` as a `.json` file in the same shape as `firebase/menu-seed.json` (`settings`, `categories`, `items`; no `updatedAt`). File name like `hot-wok-menu-backup-2026-11-03.json`. Uses the read the admin page has already done; no extra cost.
-- **Restore:** `firebase/setup.html` gets a **"Load from a backup file"** option. It reuses the seed loader: categories first, then 3 dishes per save, so the rules check everything.
+- **Restore:** `firebase/setup.html` step 5, **"Restore from a backup file"** (built in Phase 4). It reuses the seed loader: categories first, then 3 dishes per save, so the rules check everything.
 - **Optional later:** a scheduled GitHub Action reads the public document once a day and commits it to a separate `backups` branch. That's free, needs no credentials, and doesn't trigger a Pages deploy.
 - Owner guidance: download a backup after big changes and monthly; keep it in Google Drive or email.
 
@@ -260,25 +260,29 @@ GitHub Pages publishes the repo root, except what `_config.yml` excludes: `fireb
 
 Designed for **non-technical owners using only a phone**.
 
-### Screens
-1. **Login screen:** email and password fields (with `autocomplete="username"` / `"current-password"` so the phone can save them), a "Show password" option and a **Log in** button. Firebase Authentication `signInWithEmailAndPassword`. Clear, friendly messages for a wrong email/password and for "too many attempts, try again later" (Firebase's own protection). The owner **stays signed in** (local persistence) until they log out. No sign-up option.
-2. **Menu manager:**
-   - Top bar: "Hot Wok – Menu Manager", **Logout**, link "View customer menu".
-   - Category filter dropdown + search.
-   - Each item row: name, price, **large availability toggle switch**, ✏️ Edit button.
-   - **Toggle** saves immediately and shows a toast "Chicken Kottu hidden from menu" / "…is back on the menu".
-   - Floating **"+ Add dish"** button.
-3. **Edit / Add form** (full-screen sheet on mobile): name, category (dropdown), price, large price (optional), description, spicy / veg / chef's special checkboxes. **No photo field.** The admin page never handles images. Buttons: **Save**, **Cancel**, and on edit **Delete** (red, with "Are you sure you want to delete Chicken Kottu?" confirmation).
-4. Optional ↑ ↓ buttons to reorder items.
+Files: `admin.html`, `css/admin.css`, `js/admin.js` (screens and UI), `js/admin-firebase.js` (every Firebase call), `js/admin-strings.js` (all UI text; English now, Sinhala later by adding a `si` block).
+
+### Screens (as built in Phase 4)
+1. **Log in:** logo, email + password (52px fields, phone can save them), "Show password", **Log in**, "Forgot password?" (sends a reset email; never reveals whether the email exists). Plain messages for wrong email/password, too many tries, no internet, account switched off. The owner **stays logged in** until they press **Log out**.
+2. **After log in:** the page checks the account's own `admins` entry. If it's not there: "This account can't edit the menu" + **Log out**. (The rules block such an account anyway.)
+3. **Menu manager:**
+   - Top: "Menu Manager", "Logged in as …", **Log out**.
+   - "Find a dish" search; **+ Add a dish**; **Change order** (shows ↑ ↓ arrows; **Done** to finish).
+   - Dishes grouped by category (hidden categories marked "not shown to customers").
+   - Each row: name; price ("Rs. 950 · Large Rs. 1,300"); an **"Available today" ON/OFF switch** that saves at once ("Chicken Kottu is hidden from the menu" / "…is back on the menu"); **Edit**.
+   - Bottom ("More"): **Restaurant details**, **Download backup**, **View customer menu**.
+   - Other phones' changes appear live (the page listens for menu changes).
+4. **Dish form** (full-screen; the phone's Back button closes it): name (≤ 60), category, price, large price (optional), description (≤ 150, live "letters left" counter), Spicy / Vegetarian / Chef's special. Prices accept "1,250". **Save** / **Cancel** stay visible at the bottom. On edit, red **Delete this dish** with a confirmation naming the dish. **No photo field.**
+5. **Restaurant details form:** notice, opening hours, phone, address, Google Maps link (must be `https://…`). Other settings (name, tagline, show sold out) are kept unchanged.
 
 ### UX rules
-- Big buttons (≥ 48px), large text, plain English labels (no technical words like "record" or "API").
-- Disable buttons and show a spinner while saving; never allow double-submit.
-- Every action ends with a clear success or error toast.
-- If the owner is signed out (or a save fails with `permission-denied` because the account isn't allowed), return to the login screen with a plain message.
-- Each save is one Firestore transaction (see 4.3). Show "Saved" only after Firestore confirms.
-- `manifest.json` + icons so the owner can **Add to Home screen** with the name "Hot Wok Menu" and `start_url` = `admin.html`.
-- Add `<meta name="robots" content="noindex">` to admin.html.
+- Text 18px base; every button and field at least 48px tall; plain words (no "document", "field", "UID", "database").
+- While saving: the button shows a spinner + "Saving…" and is disabled. Every action ends with a short message at the top of the screen (at most 2 at once). Errors are in plain words.
+- Offline: a red banner "You are offline…", and saves are refused with a clear message (nothing is half-saved).
+- Each save is one Firestore transaction changing only `items` or `settings` (see 4.3). "Saved" is shown only after Firestore confirms.
+- Validation in the form mirrors the rules, but the **rules are the real check**.
+- `manifest.json` + icons so the owner can **Add to Home screen** (Phase 5).
+- `<meta name="robots" content="noindex, nofollow">` on admin.html.
 
 ---
 

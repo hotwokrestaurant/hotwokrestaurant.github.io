@@ -157,9 +157,14 @@ service cloud.firestore {
     }
 
     // The allow-list itself. Managed only in the Firebase console
-    // (the console isn't limited by these rules). Apps can't read or change it.
+    // (the console isn't limited by these rules).
+    //   • A signed-in account may check ITS OWN entry (the admin page uses this
+    //     to say "This account can't edit the menu"). It can't see anyone else's,
+    //     and can't list the collection.
+    //   • No app can create, change or delete entries — not even the owner's.
     match /admins/{uid} {
-      allow read, write: if false;
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
     }
 
     // Anything not matched above is denied automatically.

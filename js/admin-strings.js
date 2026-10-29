@@ -1,0 +1,133 @@
+// Every piece of text on the admin page, in one place.
+// To add Sinhala later: copy the `en` block to `si`, translate the values
+// (keep the {placeholders} as they are), and set LANGUAGE = 'si'.
+// Plain words only: no "document", "field", "UID", "database" etc.
+
+const LANGUAGE = 'en';
+
+const STRINGS = {
+  en: {
+    pageTitle: 'Hot Wok – Menu Manager',
+    appName: 'Menu Manager',
+    loading: 'Loading…',
+    noScript: 'Please turn on JavaScript to manage the menu.',
+
+    // Sign in
+    loginIntro: 'Log in to change the menu.',
+    emailLabel: 'Email',
+    passwordLabel: 'Password',
+    showPassword: 'Show password',
+    logIn: 'Log in',
+    loggingIn: 'Logging in…',
+    forgotPassword: 'Forgot password?',
+    resetNeedsEmail: 'Type your email above first, then tap "Forgot password?" again.',
+    resetSent: 'If that email has an account, a reset link is on its way. Check your inbox.',
+    errorWrongLogin: 'The email or password is not right. Please check and try again.',
+    errorEmailFormat: 'That doesn\'t look like an email address.',
+    errorTooMany: 'Too many tries. Please wait 15 minutes, then try again.',
+    errorNoInternet: 'No internet connection. Please connect and try again.',
+    errorAccountOff: 'This account has been switched off.',
+    errorLoginOther: 'Logging in didn\'t work. Please try again.',
+
+    // Not allowed / problems
+    notAllowedTitle: 'This account can\'t edit the menu',
+    notAllowedText: 'You are logged in as {email}, but this account doesn\'t have permission to change the menu. Please log out and use the restaurant\'s account.',
+    checkFailedTitle: 'Something went wrong',
+    checkFailedText: 'We couldn\'t open the menu manager. Check your internet connection and try again.',
+    tryAgain: 'Try again',
+    noMenuText: 'The menu hasn\'t been set up yet. Please contact the person who built this site.',
+
+    // Top of the main screen
+    loggedInAs: 'Logged in as {email}',
+    logOut: 'Log out',
+    offlineBanner: 'You are offline. Changes can\'t be saved until you are connected again.',
+    searchLabel: 'Find a dish',
+    searchPlaceholder: 'Type a dish name',
+    addDish: '+ Add a dish',
+    changeOrder: 'Change order',
+    doneOrdering: 'Done',
+    orderHint: 'Use the arrows to move dishes up or down. Tap "Done" when finished.',
+    noMatches: 'No dishes match your search.',
+    emptyCategory: 'No dishes yet.',
+    hiddenCategory: '(not shown to customers)',
+
+    // Dish rows
+    availableToday: 'Available today',
+    on: 'ON',
+    off: 'OFF',
+    edit: 'Edit',
+    editDishLabel: 'Edit {name}',
+    moveUp: 'Move {name} up',
+    moveDown: 'Move {name} down',
+    priceLarge: 'Large {price}',
+    switchLabel: '{name}: available today',
+
+    // Toasts
+    nowHidden: '{name} is hidden from the menu',
+    nowAvailable: '{name} is back on the menu',
+    saved: 'Saved',
+    dishSaved: '{name} saved',
+    dishAdded: '{name} added to the menu',
+    dishDeleted: '{name} deleted',
+    orderSaved: 'Order saved',
+    detailsSaved: 'Restaurant details saved',
+    backupSaved: 'Backup downloaded',
+    saveFailed: 'Couldn\'t save. Check your internet and try again.',
+    saveOffline: 'You are offline. Connect to the internet, then try again.',
+    saveNotAllowed: 'This account isn\'t allowed to change the menu.',
+    saveRejected: 'That couldn\'t be saved. Please check what you typed.',
+    dishGone: 'This dish was removed on another phone.',
+
+    // Dish form
+    addDishTitle: 'Add a dish',
+    editDishTitle: 'Edit dish',
+    nameLabel: 'Dish name',
+    categoryLabel: 'Category',
+    priceLabel: 'Price (Rs.)',
+    priceLargeLabel: 'Large price (Rs.)',
+    priceLargeHint: 'Leave empty if there is only one size.',
+    descriptionLabel: 'Short description',
+    descriptionHint: 'Optional.',
+    charactersLeft: '{count} letters left',
+    spicyLabel: 'Spicy',
+    vegLabel: 'Vegetarian',
+    featuredLabel: 'Chef\'s special',
+    save: 'Save',
+    saving: 'Saving…',
+    cancel: 'Cancel',
+    deleteDish: 'Delete this dish',
+    confirmDelete: 'Delete "{name}" from the menu?\n\nThis can\'t be undone.',
+    errorNameEmpty: 'Please type the dish name.',
+    errorNameLong: 'The name is too long (up to {max} letters).',
+    errorPrice: 'Please type the price as a whole number, e.g. 1250.',
+    errorPriceLarge: 'Please type the large price as a whole number, or leave it empty.',
+    errorDescriptionLong: 'The description is too long (up to {max} letters).',
+
+    // Restaurant details form
+    detailsButton: 'Restaurant details',
+    detailsTitle: 'Restaurant details',
+    noticeLabel: 'Notice at the top of the menu',
+    noticeHint: 'Optional. For example: Closed on Poya day.',
+    hoursLabel: 'Opening hours',
+    phoneLabel: 'Phone number',
+    addressLabel: 'Address',
+    mapLabel: 'Google Maps link',
+    mapHint: 'Optional. In Google Maps: Share → Copy link, then paste here.',
+    errorMap: 'The link must start with https:// and have no spaces.',
+    errorTooLong: 'This is too long (up to {max} letters).',
+
+    // Other
+    backupButton: 'Download backup',
+    backupHint: 'Saves a copy of the whole menu to this phone. Do this after big changes.',
+    viewMenu: 'View customer menu',
+    moreTitle: 'More'
+  }
+};
+
+// Returns the text for `key`, with {placeholders} filled in from `values`.
+export function t(key, values = {}) {
+  const text = STRINGS[LANGUAGE][key] ?? STRINGS.en[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (match, name) => (name in values ? String(values[name]) : match));
+}
+
+export const LANGUAGE_CODE = LANGUAGE;

@@ -113,7 +113,7 @@ Use the **restaurant's own Google account**, not your personal one, so the resta
 5. Wait about **1 minute** before testing. New rules take a moment to apply everywhere.
 
 **What the rules do**, in plain words:
-- **Anyone** can read the menu document `menu/published`. Nothing else in the database can be read.
+- **Anyone** can read the menu document `menu/published`. The only other thing that can be read: a logged-in account can check whether *its own* UID is in `admins`. Nothing else can be read.
 - **Only** signed-in accounts listed in `admins` can save it, and only if the data is valid:
   - Dish names 1–60 characters, descriptions up to 150.
   - Prices are positive whole rupees.
@@ -193,7 +193,7 @@ Run these on the setup page (step G). Each one should say **PASS**:
    - Change the simulation type to **create** and add any document data.
    - Click **Run**. Expected: red, **denied**.
 
-**Already tested before you got this file:** the rules passed **60 checks** in the official Firestore emulator. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
+**Already tested before you got this file:** the rules passed **64 checks** in the official Firestore emulator. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
 - **Reads:** signed-out reads (allowed); listing the collection and reading other documents (denied).
 - **Who can write:** signed-out visitors and signed-in non-owners (denied); creating the menu with dishes in the same save (denied).
 - **Loading the menu:** creating it without dishes, then loading the 18 dishes 3 at a time (allowed); a 4-dish save (denied).
@@ -212,7 +212,7 @@ Run these on the setup page (step G). Each one should say **PASS**:
   - A category change together with a dish change.
   - A non-server `updatedAt`, a `javascript:` map link, and deleting the menu.
 - **Allowed saves stay under the 1,000-step limit** with both 18 and 150 dishes.
-- **The `admins` allow-list can't be changed from any app.** A stranger can't add, change or delete an `admins` document (not even one for themselves), and neither can a signed-out visitor or the owner's own account.
+- **The `admins` allow-list can't be changed from any app.** A stranger can't add, change or delete an `admins` document (not even one for themselves), and neither can a signed-out visitor or the owner's own account. A signed-in account can only *check its own* entry (the admin page uses this to show "This account can't edit the menu"); it can't read anyone else's or list them.
 - **Two phones editing at the same time:** two transactions that each change a different dish at the same moment both keep their change. A transaction that changes only `settings` leaves dishes and categories untouched. (This is the pattern the admin page will use; see the spec, section 4.3.)
 
 ---
@@ -241,7 +241,7 @@ The free Spark plan has **no automatic Firestore backups**; Firebase's managed e
 | When | How | Restore |
 |---|---|---|
 | **Now (Phases 2–3)** | Keep `firebase/menu-seed.json` as the starting point. After the owner enters the real menu, copy the document from the console: **Firestore → Data → `menu/published`**. Or ask the developer to export it (below). | Load it with the setup page (step G, tick **Replace…**). |
-| **Phase 4 (planned)** | A **"Download backup"** button in the admin page. It saves the menu as a `.json` file in the same shape as `menu-seed.json`, to the phone or computer. Suggest the owner taps it after big changes and once a month, and keeps the file in Google Drive or email. | The setup page gets a **"Load from a backup file"** option that restores any such file (3 dishes per save, so the rules still check everything). |
+| **Admin page (Phase 4)** | **Download backup** (admin page → More). It saves the menu as `hot-wok-menu-backup-YYYY-MM-DD.json`, in the same shape as `menu-seed.json`. Suggest the owner taps it after big changes and once a month, and keeps the file in Google Drive or email. | Setup page **step 5, "Restore from a backup file"**: sign in, tick **Replace…**, choose the file. It loads 3 dishes per save, so the rules still check everything. |
 | **Optional later** | A free scheduled **GitHub Action** that reads the public menu once a day (1 read) and saves it to a separate `backups` branch of the repo. It needs no password, because the menu is publicly readable. | Same restore as above. |
 
 > The customer page also keeps the last menu it saw in each phone's storage, but that isn't a backup. It can't be restored into Firestore, and it disappears when the browser clears data.

@@ -120,17 +120,22 @@ onClick('sign-out', async () => {
   log('Signed out.');
 });
 
-// ---------- 3. Load the starting menu ----------
+// ---------- 3. Load the starting menu (or 5. a backup file) ----------
 
-onClick('seed', async () => {
+// Copies a whole menu ({ settings, categories, items }) into Firestore.
+// Save 1: settings + categories with NO dishes (the rules require this when
+// categories change; removing dishes is always allowed).
+// Then add the dishes 3 at a time, so each save passes the rules' checks.
+async function loadMenuData(data, label) {
   if (!auth.currentUser) {
     log('Sign in as the owner first (step 2).');
     return;
   }
-
-  const response = await fetch('menu-seed.json', { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Could not load menu-seed.json (${response.status})`);
-  const seed = await response.json();
+  if (!data || typeof data.settings !== 'object' || !Array.isArray(data.categories) || !Array.isArray(data.items)) {
+    log('FAIL — this file is not a menu (it needs settings, categories and items).', 'fail');
+    return;
+  }
+  const menu = { settings: data.settings, categories: data.categories, items: data.items };
 
   const existing = await getDoc(menuRef);
   const replacing = existing.exists() && (existing.data().items || []).length > 0;
@@ -139,27 +144,41 @@ onClick('seed', async () => {
     return;
   }
 
-  // Save 1: settings + categories with NO dishes (the rules require this when
-  // categories change; removing dishes is always allowed).
-  // Then add the dishes 3 at a time, so each save passes the rules' checks.
   try {
-    for (let count = 0; count <= seed.items.length; count += DISHES_PER_SAVE) {
-      await setDoc(menuRef, {
-        settings: seed.settings,
-        categories: seed.categories,
-        items: seed.items.slice(0, count),
-        updatedAt: serverTimestamp()
-      });
-      log(`Saved ${Math.min(count, seed.items.length)} of ${seed.items.length} dishes…`);
+    for (let count = 0; count <= menu.items.length; count += DISHES_PER_SAVE) {
+      await setDoc(menuRef, { ...menu, items: menu.items.slice(0, count), updatedAt: serverTimestamp() });
+      log(`Saved ${Math.min(count, menu.items.length)} of ${menu.items.length} dishes…`);
     }
     // The loop stops at a multiple of 3; make sure the last few are included.
-    if (seed.items.length % DISHES_PER_SAVE !== 0) {
-      await setDoc(menuRef, { ...seed, updatedAt: serverTimestamp() });
+    if (menu.items.length % DISHES_PER_SAVE !== 0) {
+      await setDoc(menuRef, { ...menu, updatedAt: serverTimestamp() });
     }
-    log(`PASS — starting menu loaded: ${seed.items.length} dishes, ${seed.categories.length} categories.`, 'pass');
+    log(`PASS — ${label} loaded: ${menu.items.length} dishes, ${menu.categories.length} categories.`, 'pass');
   } catch (error) {
     log(`FAIL — loading stopped. ${describeError(error)}`, 'fail');
   }
+}
+
+onClick('seed', async () => {
+  const response = await fetch('menu-seed.json', { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not load menu-seed.json (${response.status})`);
+  await loadMenuData(await response.json(), 'starting menu');
+});
+
+onClick('restore', async () => {
+  const file = document.getElementById('backup-file').files[0];
+  if (!file) {
+    log('Choose a backup file first (hot-wok-menu-backup-….json).');
+    return;
+  }
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (error) {
+    log('FAIL — that file could not be read as a backup.', 'fail');
+    return;
+  }
+  await loadMenuData(data, `backup "${file.name}"`);
 });
 
 // ---------- 4. Owner tests ----------

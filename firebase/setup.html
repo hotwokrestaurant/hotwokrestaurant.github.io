@@ -53,6 +53,14 @@
       <button id="test-invalid" class="button" type="button">Test: a 61-character dish name is rejected</button>
     </section>
 
+    <section class="setup__step" aria-labelledby="step5">
+      <h2 id="step5">5. Restore from a backup file</h2>
+      <p>Choose a file saved with "Download backup" on the admin page. Sign in first (step 2) and tick "Replace the menu…" in step 3.</p>
+      <label for="backup-file">Backup file</label>
+      <input id="backup-file" class="setup__input" type="file" accept=".json,application/json">
+      <button id="restore" class="button" type="button">Restore this backup</button>
+    </section>
+
     <section class="setup__step" aria-labelledby="log-title">
       <h2 id="log-title">Log</h2>
       <ol id="log" class="setup__log" role="log" aria-live="polite"></ol>
