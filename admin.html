@@ -87,6 +87,7 @@
 
     <section class="more" aria-labelledby="more-title">
       <h2 id="more-title" class="more__title" data-i18n="moreTitle"></h2>
+      <button id="open-sections" class="btn" type="button" data-i18n="sectionsButton"></button>
       <button id="open-details" class="btn" type="button" data-i18n="detailsButton"></button>
       <button id="download-backup" class="btn" type="button" data-i18n="backupButton"></button>
       <p class="more__hint" data-i18n="backupHint"></p>
@@ -127,6 +128,34 @@
         <button id="dish-cancel" class="btn" type="button" data-i18n="cancel"></button>
       </div>
       <button id="dish-delete" class="btn btn--danger" type="button" data-i18n="deleteDish" hidden></button>
+    </form>
+  </section>
+
+  <!-- Full-screen list: menu sections -->
+  <section id="screen-sections" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sections-title" hidden>
+    <div class="sheet__form">
+      <h2 id="sections-title" class="sheet__title" data-i18n="sectionsTitle"></h2>
+      <p class="form__hint sheet__intro" data-i18n="sectionsIntro"></p>
+      <button id="add-section" class="btn btn--primary" type="button" data-i18n="addSection"></button>
+      <ul id="section-list" class="dish-rows section-list"></ul>
+      <div class="sheet__actions">
+        <button id="sections-done" class="btn" type="button" data-i18n="done"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Small full-screen form: add / rename a section -->
+  <section id="screen-section" class="sheet" role="dialog" aria-modal="true" aria-labelledby="section-form-title" hidden>
+    <form id="section-form" class="sheet__form" novalidate>
+      <h2 id="section-form-title" class="sheet__title"></h2>
+      <label class="form__label" for="section-name" data-i18n="sectionNameLabel"></label>
+      <input id="section-name" class="form__input" type="text" maxlength="30" autocomplete="off" aria-describedby="section-name-hint" required>
+      <p class="form__hint" id="section-name-hint"></p>
+      <p id="section-error" class="form__error" role="alert" hidden></p>
+      <div class="sheet__actions">
+        <button id="section-save" class="btn btn--primary" type="submit" data-i18n="save"></button>
+        <button id="section-cancel" class="btn" type="button" data-i18n="cancel"></button>
+      </div>
     </form>
   </section>
 

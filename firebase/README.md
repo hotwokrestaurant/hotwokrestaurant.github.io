@@ -117,19 +117,21 @@ Use the **restaurant's own Google account**, not your personal one, so the resta
 - **Only** signed-in accounts listed in `admins` can save it, and only if the data is valid:
   - Dish names 1–60 characters, descriptions up to 150.
   - Prices are positive whole rupees.
-  - A dish's category must be one of the 8 known ones.
+  - A dish must belong to a menu section that exists (by the section's permanent id, e.g. `cat_kottu`).
+  - Sections: 1–25 of them, names 1–30 characters, ids like `cat_…`.
   - Photo names must be simple file names.
   - The map link must start with `https://`.
   - No unknown fields.
-- The rules have no loops, so each save checks the dishes that are **new or changed**. Settings and categories are checked whenever they change.
-- Firestore also stops a rule after 1,000 steps, so two limits apply:
+- The rules have no loops, so each save checks the dishes and sections that are **new or changed**. Settings are checked whenever they change.
+- Firestore also stops a rule after 1,000 steps, so three limits apply:
   - **A save may add or change at most 3 dishes.**
-  - **A save that changes the categories can't also change dishes.**
+  - **A save may add or change at most 10 sections.**
+  - **A save that changes the sections can't also change dishes.**
 
-  The admin page saves one change at a time, and the setup page adds dishes 3 at a time, so the owner never hits either limit.
+  The admin page saves one change at a time, and the setup page adds sections 10 at a time and dishes 3 at a time, so the owner never hits these limits. Tested with 25 sections and 150 dishes.
 - The menu document can't be deleted. Everything not mentioned is denied.
 
-**Adding a new category later:** add the name to `categoryNamePattern()` in `firebase/firestore.rules` (names are separated by `|`), publish the rules again (this step), and then add the category to the menu data.
+**Menu sections** are managed by the owner in the admin page (More → Menu sections): add, rename, reorder, show/hide, and delete empty ones. No rule changes are needed for new sections.
 
 ## G. Load the starting menu
 
@@ -193,7 +195,7 @@ Run these on the setup page (step G). Each one should say **PASS**:
    - Change the simulation type to **create** and add any document data.
    - Click **Run**. Expected: red, **denied**.
 
-**Already tested before you got this file:** the rules passed **64 checks** in the official Firestore emulator. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
+**Already tested before you got this file:** the rules passed **84 checks** in the official Firestore emulator, plus a step-limit test of every kind of save with 25 sections and 150 dishes. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
 - **Reads:** signed-out reads (allowed); listing the collection and reading other documents (denied).
 - **Who can write:** signed-out visitors and signed-in non-owners (denied); creating the menu with dishes in the same save (denied).
 - **Loading the menu:** creating it without dishes, then loading the 18 dishes 3 at a time (allowed); a 4-dish save (denied).
@@ -206,16 +208,41 @@ Run these on the setup page (step G). Each one should say **PASS**:
 - **Every validation limit:**
   - 61-character or empty names, 151-character descriptions.
   - Text, zero, decimal and negative prices.
-  - Unknown or partly-matching categories.
+  - Dishes in a section that doesn't exist, or pointing to a section by name instead of id.
+  - Sections with bad ids, empty or 31-character names, extra fields, a non-true/false `visible`, 26 sections, none at all, or 11 changed in one save.
   - Extra or missing fields, and photo names with folders or web addresses.
-  - Bad dish ids, 4 changed dishes, 201 dishes, 9 categories.
-  - A category change together with a dish change.
+  - Bad dish ids, 4 changed dishes, 201 dishes.
+  - A section change together with a dish change.
+- **Sections:** add, rename, reorder, hide, delete an empty one, 30-character names (allowed).
+- **The one-time sections upgrade** (old format → section ids): each step allowed, mistakes refused, and the result equals `menu-seed.json`.
   - A non-server `updatedAt`, a `javascript:` map link, and deleting the menu.
 - **Allowed saves stay under the 1,000-step limit** with both 18 and 150 dishes.
 - **The `admins` allow-list can't be changed from any app.** A stranger can't add, change or delete an `admins` document (not even one for themselves), and neither can a signed-out visitor or the owner's own account. A signed-in account can only *check its own* entry (the admin page uses this to show "This account can't edit the menu"); it can't read anyone else's or list them.
 - **Two phones editing at the same time:** two transactions that each change a different dish at the same moment both keep their change. A transaction that changes only `settings` leaves dishes and categories untouched. (This is the pattern the admin page will use; see the spec, section 4.3.)
 
 ---
+
+## One-time upgrade: menu sections (live database)
+
+Menus loaded before the "Menu sections" feature store sections without ids. Run this **once** on the live database. It takes about 5 minutes; do it at a quiet time. The admin page shows "The menu needs a one-time update" until it's done. Customers are never affected: the menu page reads both formats.
+
+1. **Push the new code** to GitHub and wait 1–2 minutes for GitHub Pages. Open https://hotwokrestaurant.github.io/ and check the menu still shows normally.
+2. **Publish the new rules:** Firestore Database → Rules → replace everything with `firebase/firestore.rules` → **Publish**. Wait 1 minute.
+3. On your computer, in the project folder: `python -m http.server 8000`, then open **http://localhost:8000/firebase/setup.html**.
+4. **Step 2:** sign in with the owner account.
+5. **Step 6:**
+   1. Click **1. Download a backup first**. Keep the file `hot-wok-menu-backup-before-sections-upgrade-….json`.
+   2. Click **2. Upgrade the menu**.
+   3. The log counts dishes up to 18 and ends with **"PASS — upgrade finished: 8 sections, 18 dishes, all linked by id."**
+6. **Check:**
+   - The customer menu looks exactly as before (same tabs, order, prices).
+   - In the Firebase console, `categories` is now a map (`cat_friedrice`, `cat_kottu`, …) and every dish has `category_id`.
+   - The admin page opens normally and shows **More → Menu sections**.
+7. Click **Sign out**, stop the server (**Ctrl+C**).
+
+**If something goes wrong:**
+- Click **2. Upgrade the menu** again; it continues where it stopped.
+- Or restore the backup with **step 5** (tick **Replace…** in step 3 first). Old-format backups are converted automatically.
 
 ## Before going live (checklist)
 
@@ -241,7 +268,7 @@ The free Spark plan has **no automatic Firestore backups**; Firebase's managed e
 | When | How | Restore |
 |---|---|---|
 | **Now (Phases 2–3)** | Keep `firebase/menu-seed.json` as the starting point. After the owner enters the real menu, copy the document from the console: **Firestore → Data → `menu/published`**. Or ask the developer to export it (below). | Load it with the setup page (step G, tick **Replace…**). |
-| **Admin page (Phase 4)** | **Download backup** (admin page → More). It saves the menu as `hot-wok-menu-backup-YYYY-MM-DD.json`, in the same shape as `menu-seed.json`. Suggest the owner taps it after big changes and once a month, and keeps the file in Google Drive or email. | Setup page **step 5, "Restore from a backup file"**: sign in, tick **Replace…**, choose the file. It loads 3 dishes per save, so the rules still check everything. |
+| **Admin page (Phase 4)** | **Download backup** (admin page → More). It saves the menu as `hot-wok-menu-backup-YYYY-MM-DD.json`, in the same shape as `menu-seed.json`. Suggest the owner taps it after big changes and once a month, and keeps the file in Google Drive or email. | Setup page **step 5, "Restore from a backup file"**: sign in, tick **Replace…**, choose the file. It loads sections 10 per save and dishes 3 per save, so the rules still check everything. Older backups (made before the sections upgrade) are converted automatically. |
 | **Optional later** | A free scheduled **GitHub Action** that reads the public menu once a day (1 read) and saves it to a separate `backups` branch of the repo. It needs no password, because the menu is publicly readable. | Same restore as above. |
 
 > The customer page also keeps the last menu it saw in each phone's storage, but that isn't a backup. It can't be restored into Firestore, and it disappears when the browser clears data.
@@ -295,7 +322,7 @@ The daily counters reset at midnight US Pacific time, around **12:30–1:30 pm S
 | `auth/operation-not-allowed` | Email/Password sign-in is switched off | Step D. |
 | `auth/invalid-credential` | Wrong email or password (Firebase doesn't say which, on purpose) | Check both. Reset the password in **Authentication → Users → ⋮ → Reset password**. |
 | `auth/too-many-requests` | Too many wrong passwords; Firebase paused sign-in | Wait 15–30 minutes, or reset the password. |
-| `permission-denied` / *"Missing or insufficient permissions"* when the **owner** saves | The rules said no | Check four things:<ol><li>The rules are published (step F) and a minute has passed.</li><li>The owner's UID is in `admins` with no typo (step E).</li><li>You're signed in.</li><li>The data is valid: name ≤ 60 characters, whole-number price, known category, at most 3 dishes changed in one save, and no dish changes in the same save as a category change.</li></ol> |
+| `permission-denied` / *"Missing or insufficient permissions"* when the **owner** saves | The rules said no | Check four things:<ol><li>The rules are published (step F) and a minute has passed.</li><li>The owner's UID is in `admins` with no typo (step E).</li><li>You're signed in.</li><li>The data is valid: name ≤ 60 characters, whole-number price, the dish's section exists, at most 3 dishes changed in one save, and no dish changes in the same save as a section change.</li></ol> |
 | `permission-denied` when **reading** the menu | Rules not published, or wrong document | Publish the rules (step F). The menu must be at `menu/published` exactly. |
 | *"Failed to get document because the client is offline"* or `unavailable` | No internet, wrong `projectId`, or the database wasn't created | Check the connection and `projectId` in `js/config.js`. Make sure step C was completed. |
 | `not-found` mentioning `database (default)` | Firestore was never created, or was given a different ID | Step C, with database ID `(default)`. |

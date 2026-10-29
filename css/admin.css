@@ -427,6 +427,28 @@ select.form__input {
   cursor: default;
 }
 
+/* ---------- Menu sections list ---------- */
+.sheet__intro {
+  margin: var(--space-2) 0 var(--space-2);
+}
+
+.section-list {
+  margin-top: var(--space-4);
+}
+
+/* ↑ ↓ Rename Delete: wrap onto two lines on narrow phones. */
+.section-row__buttons .btn {
+  margin: var(--space-2) var(--space-2) 0 0;
+}
+
+.dish-row__controls.section-row__buttons .btn--section-down {
+  margin-left: 0;
+}
+
+.btn--section-delete {
+  border-color: var(--color-red);
+}
+
 .more {
   margin-top: var(--space-7);
   padding-top: var(--space-5);

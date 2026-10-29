@@ -16,12 +16,12 @@ const MENU_URL = 'https://firestore.googleapis.com/v1/projects/'
   + `${encodeURIComponent(FIREBASE_CONFIG.projectId)}/databases/(default)/documents/`
   + `${MENU_COLLECTION}/${MENU_DOC_ID}?key=${encodeURIComponent(FIREBASE_CONFIG.apiKey)}`;
 
-// A menu has settings (object), categories (list) and items (list).
-// Anything else (old, damaged or edited data) is treated as "no menu".
+// A menu has settings (object), categories (a map of sections by id, or the
+// older list format) and items (list). Anything else is treated as "no menu".
 export function isValidMenu(data) {
   return Boolean(data)
     && typeof data.settings === 'object' && data.settings !== null
-    && Array.isArray(data.categories)
+    && typeof data.categories === 'object' && data.categories !== null
     && Array.isArray(data.items);
 }
 

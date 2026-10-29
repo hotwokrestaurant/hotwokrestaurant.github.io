@@ -24,6 +24,25 @@ export function toPositiveNumber(value) {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
+// ---------- Menu sections ----------
+// Sections are saved as a map keyed by a permanent id:
+//   { cat_kottu: { name: 'Kottu', sort_order: 2, visible: true }, … }
+// Older saved menus (before the upgrade) used a list without ids:
+//   [{ name: 'Kottu', sort_order: 2, visible: true }, …]
+// Both are turned into one sorted list: [{ id, name, sort_order, visible }].
+export function sectionList(categories) {
+  const list = Array.isArray(categories)
+    ? categories.map((section) => ({ ...section, id: section.id || null }))
+    : Object.keys(categories || {}).map((id) => ({ ...categories[id], id }));
+  return list.sort((a, b) => (Number(a.sort_order) - Number(b.sort_order)) || String(a.name).localeCompare(String(b.name)));
+}
+
+// Does this dish belong to this section? New dishes point to the section's id
+// (category_id); older ones used the section's name (category).
+export function dishInSection(item, section) {
+  return item.category_id ? item.category_id === section.id : item.category === section.name;
+}
+
 // Lower-case and trim text so searches ignore capitals and extra spaces.
 export function normalizeText(text) {
   return String(text || '').toLowerCase().trim();

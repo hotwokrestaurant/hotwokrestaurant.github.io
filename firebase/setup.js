@@ -5,7 +5,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import {
-  getFirestore, doc, getDoc, setDoc, serverTimestamp
+  getFirestore, doc, getDoc, setDoc, runTransaction, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
@@ -14,8 +14,58 @@ import {
   FIREBASE_CONFIG, FIREBASE_NOT_CONFIGURED, MENU_COLLECTION, MENU_DOC_ID
 } from '../js/config.js';
 
-// The security rules allow at most 3 new/changed dishes per save.
+// The security rules allow at most 3 new/changed dishes and 10 new/changed
+// sections per save, and sections can't change in the same save as dishes.
 const DISHES_PER_SAVE = 3;
+const SECTIONS_PER_SAVE = 10;
+
+// ---------- Menu formats ----------
+// Current format: categories = { cat_kottu: { name, sort_order, visible }, … },
+//                 dishes have category_id: 'cat_kottu'.
+// Old format (before the sections upgrade): categories = [{ name, sort_order,
+// visible }], dishes have category: 'Kottu'.
+
+// Permanent id for a section, made from its name: "Fried Rice" → "cat_friedrice".
+// (Same ids as firebase/menu-seed.json.) Falls back to random letters if the
+// name gives too few letters or the id is already taken.
+function sectionIdFor(name, taken) {
+  let id = `cat_${String(name).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)}`;
+  while (id.length < 8 || taken.has(id)) {
+    id = `${id.slice(0, 20)}${Math.random().toString(36).slice(2, 4)}`.replace(/[^a-z0-9_]/g, '');
+  }
+  taken.add(id);
+  return id;
+}
+
+function isOldFormat(menu) {
+  return Array.isArray(menu.categories) || menu.items.some((item) => !item.category_id);
+}
+
+// Returns { sections, idByName } for an old-format section list.
+function sectionsFromList(list) {
+  const taken = new Set();
+  const sections = {};
+  const idByName = {};
+  list.forEach((section) => {
+    const id = sectionIdFor(section.name, taken);
+    sections[id] = { name: section.name, sort_order: section.sort_order, visible: section.visible };
+    idByName[section.name] = id;
+  });
+  return { sections, idByName };
+}
+
+// One old-format dish → current format (category name → category_id).
+function upgradeDish(dish, idByName) {
+  const { category, ...rest } = dish;
+  return { ...rest, category_id: idByName[category] };
+}
+
+// Any menu (old or current format) → current format.
+function toCurrentFormat(data) {
+  if (!Array.isArray(data.categories)) return { settings: data.settings, categories: data.categories, items: data.items };
+  const { sections, idByName } = sectionsFromList(data.categories);
+  return { settings: data.settings, categories: sections, items: data.items.map((dish) => (dish.category_id ? dish : upgradeDish(dish, idByName))) };
+}
 
 // ---------- Log ----------
 
@@ -122,20 +172,26 @@ onClick('sign-out', async () => {
 
 // ---------- 3. Load the starting menu (or 5. a backup file) ----------
 
-// Copies a whole menu ({ settings, categories, items }) into Firestore.
-// Save 1: settings + categories with NO dishes (the rules require this when
-// categories change; removing dishes is always allowed).
-// Then add the dishes 3 at a time, so each save passes the rules' checks.
+// Copies a whole menu ({ settings, categories, items }, old or current format)
+// into Firestore, in steps the rules accept:
+//   1. settings + up to 10 sections, NO dishes;
+//   2. the remaining sections, 10 per save;
+//   3. the dishes, 3 per save.
 async function loadMenuData(data, label) {
   if (!auth.currentUser) {
     log('Sign in as the owner first (step 2).');
     return;
   }
-  if (!data || typeof data.settings !== 'object' || !Array.isArray(data.categories) || !Array.isArray(data.items)) {
+  if (!data || typeof data.settings !== 'object' || typeof data.categories !== 'object' || !Array.isArray(data.items)) {
     log('FAIL — this file is not a menu (it needs settings, categories and items).', 'fail');
     return;
   }
-  const menu = { settings: data.settings, categories: data.categories, items: data.items };
+  const menu = toCurrentFormat(data);
+  const missing = menu.items.filter((dish) => !menu.categories[dish.category_id]);
+  if (missing.length) {
+    log(`FAIL — ${missing.length} dish(es) belong to a section that isn't in the file, e.g. "${missing[0].name}". Nothing was changed.`, 'fail');
+    return;
+  }
 
   const existing = await getDoc(menuRef);
   const replacing = existing.exists() && (existing.data().items || []).length > 0;
@@ -144,16 +200,18 @@ async function loadMenuData(data, label) {
     return;
   }
 
+  const sectionIds = Object.keys(menu.categories);
+  const sectionsUpTo = (count) => Object.fromEntries(sectionIds.slice(0, count).map((id) => [id, menu.categories[id]]));
   try {
-    for (let count = 0; count <= menu.items.length; count += DISHES_PER_SAVE) {
+    for (let count = SECTIONS_PER_SAVE; count < sectionIds.length + SECTIONS_PER_SAVE; count += SECTIONS_PER_SAVE) {
+      await setDoc(menuRef, { settings: menu.settings, categories: sectionsUpTo(count), items: [], updatedAt: serverTimestamp() });
+      log(`Saved ${Math.min(count, sectionIds.length)} of ${sectionIds.length} sections…`);
+    }
+    for (let count = DISHES_PER_SAVE; count < menu.items.length + DISHES_PER_SAVE; count += DISHES_PER_SAVE) {
       await setDoc(menuRef, { ...menu, items: menu.items.slice(0, count), updatedAt: serverTimestamp() });
       log(`Saved ${Math.min(count, menu.items.length)} of ${menu.items.length} dishes…`);
     }
-    // The loop stops at a multiple of 3; make sure the last few are included.
-    if (menu.items.length % DISHES_PER_SAVE !== 0) {
-      await setDoc(menuRef, { ...menu, updatedAt: serverTimestamp() });
-    }
-    log(`PASS — ${label} loaded: ${menu.items.length} dishes, ${menu.categories.length} categories.`, 'pass');
+    log(`PASS — ${label} loaded: ${menu.items.length} dishes, ${sectionIds.length} sections.`, 'pass');
   } catch (error) {
     log(`FAIL — loading stopped. ${describeError(error)}`, 'fail');
   }
@@ -221,5 +279,79 @@ onClick('test-invalid', async () => {
   } catch (error) {
     if (error.code === 'permission-denied') log('PASS — the invalid dish was rejected (the menu is unchanged).', 'pass');
     else log(`FAIL — unexpected error: ${describeError(error)}`, 'fail');
+  }
+});
+
+// ---------- 6. One-time upgrade: menu sections with ids ----------
+// Old format → current format, in steps the new rules accept. Each step is a
+// transaction on the LATEST menu, so it's safe even if the owner edits at the
+// same time, and running it again simply continues where it stopped.
+
+let backupDownloaded = false;
+
+function saveBackupFile(data, name) {
+  const url = URL.createObjectURL(new Blob([`${JSON.stringify(data, null, 2)}\n`], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+onClick('upgrade-backup', async () => {
+  const snapshot = await getDoc(menuRef);
+  if (!snapshot.exists()) { log('There is no menu to back up yet.'); return; }
+  const { settings, categories, items } = snapshot.data();
+  const date = new Date().toISOString().slice(0, 10);
+  saveBackupFile({ settings, categories, items }, `hot-wok-menu-backup-before-sections-upgrade-${date}.json`);
+  backupDownloaded = true;
+  document.getElementById('upgrade').disabled = false;
+  log(`Backup downloaded (${items.length} dishes). Keep this file until the upgrade is checked.`, 'pass');
+});
+
+onClick('upgrade', async () => {
+  if (!auth.currentUser) { log('Sign in as the owner first (step 2).'); return; }
+  if (!backupDownloaded) { log('Download the backup first (button above).'); return; }
+
+  const first = await getDoc(menuRef);
+  if (!first.exists()) { log('There is no menu to upgrade.'); return; }
+  if (!isOldFormat(first.data())) { log('PASS — the menu is already up to date. Nothing to do.', 'pass'); return; }
+
+  try {
+    // Step A: sections list → sections map with permanent ids (dishes unchanged).
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(menuRef);
+      const { categories } = snapshot.data();
+      if (!Array.isArray(categories)) return; // already done earlier
+      if (categories.length > SECTIONS_PER_SAVE) throw new Error(`more than ${SECTIONS_PER_SAVE} sections — upgrade needs a developer`);
+      transaction.update(menuRef, { categories: sectionsFromList(categories).sections, updatedAt: serverTimestamp() });
+    });
+    log('Sections now have permanent ids.');
+
+    // Step B: dishes, 3 per save: category name → category_id.
+    for (;;) {
+      const result = await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(menuRef);
+        const { categories, items } = snapshot.data();
+        const idByName = {};
+        Object.keys(categories).forEach((id) => { idByName[categories[id].name] = id; });
+        const todo = items.filter((dish) => !dish.category_id).slice(0, DISHES_PER_SAVE);
+        if (todo.length === 0) return { left: 0 };
+        const unknown = todo.find((dish) => !idByName[dish.category]);
+        if (unknown) throw new Error(`dish "${unknown.name}" is in section "${unknown.category}", which doesn't exist`);
+        const upgraded = items.map((dish) => (todo.includes(dish) ? upgradeDish(dish, idByName) : dish));
+        transaction.update(menuRef, { items: upgraded, updatedAt: serverTimestamp() });
+        return { left: items.filter((dish) => !dish.category_id).length - todo.length, total: items.length };
+      });
+      if (result.left === 0) break;
+      log(`Dishes upgraded: ${result.total - result.left} of ${result.total}…`);
+    }
+
+    const done = (await getDoc(menuRef)).data();
+    log(`PASS — upgrade finished: ${Object.keys(done.categories).length} sections, ${done.items.length} dishes, all linked by id.`, 'pass');
+  } catch (error) {
+    log(`FAIL — upgrade stopped (${describeError(error)}). The menu still works; run the upgrade again, or restore the backup in step 5.`, 'fail');
   }
 });

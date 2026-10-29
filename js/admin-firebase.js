@@ -68,6 +68,16 @@ export function watchMenu(onMenu, onError) {
 // (e.g. the dish was deleted on another phone).
 export class GoneError extends Error {}
 
+// Thrown when a change isn't allowed by the current menu (e.g. deleting a
+// section that still has dishes). `messageKey` + `values` describe why.
+export class BlockedError extends Error {
+  constructor(messageKey, values = {}) {
+    super(messageKey);
+    this.messageKey = messageKey;
+    this.values = values;
+  }
+}
+
 function withTimeout(promise, ms) {
   let timer;
   const timeout = new Promise((resolve, reject) => {
@@ -76,13 +86,27 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
-// Runs `change(items)` on the LATEST dish list and saves only `items`.
-// `change` gets a copy and returns the new list (or throws GoneError).
+const copy = (value) => JSON.parse(JSON.stringify(value));
+
+// Runs `change(items, sections)` on the LATEST menu and saves only `items`.
+// `change` gets copies and returns the new dish list (or throws an error,
+// e.g. GoneError). `sections` is the sections map, for checks only.
 export function saveItems(change) {
   return withTimeout(runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(menuRef);
-    const items = JSON.parse(JSON.stringify(snapshot.data().items));
-    transaction.update(menuRef, { items: change(items), updatedAt: serverTimestamp() });
+    const { items, categories } = snapshot.data();
+    transaction.update(menuRef, { items: change(copy(items), copy(categories)), updatedAt: serverTimestamp() });
+  }), SAVE_TIMEOUT_MS);
+}
+
+// Runs `change(sections, items)` on the LATEST menu and saves only the
+// sections map. `items` is passed so a change can check, at the very moment
+// of saving, e.g. that a section being deleted really has no dishes.
+export function saveSections(change) {
+  return withTimeout(runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(menuRef);
+    const { items, categories } = snapshot.data();
+    transaction.update(menuRef, { categories: change(copy(categories), copy(items)), updatedAt: serverTimestamp() });
   }), SAVE_TIMEOUT_MS);
 }
 

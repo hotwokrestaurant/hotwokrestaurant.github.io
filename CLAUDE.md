@@ -41,14 +41,14 @@ The developer (Janana) is a **beginner** building this for free as a real client
 
 1. **No paid services, no free trials, no "dynamic QR" services, no services that may start charging later.** Firebase stays on the **Spark plan** forever: never anything that needs billing (no Blaze upgrade, no Cloud Storage, no Cloud Functions, no paid extensions).
 2. **Never put secrets in the repo.** The repo is public (GitHub Pages). The Firebase web config in `js/config.js` is *not* a secret (it only identifies the project). The owner's password, Google account details and any service-account keys must never be committed.
-3. **All validation happens in `firebase/firestore.rules`** (types, sizes, allowed fields, known categories), even if the frontend also validates. Limits that come from how rules work (no loops, max 1,000 steps per request): a save may add/change **at most 3 dishes**, and a save that changes the **categories** can't also change dishes. Rules are tested in the Firestore emulator before every change.
+3. **All validation happens in `firebase/firestore.rules`** (types, sizes, allowed fields, known categories), even if the frontend also validates. Limits that come from how rules work (no loops, max 1,000 steps per request): a save may add/change **at most 3 dishes or 10 sections**, and a save that changes the **sections** can't also change dishes. Rules are tested in the Firestore emulator before every change, including the 1,000-step test with 25 sections and 150 dishes.
 4. **Never insert user/database data with `innerHTML`.** Use `textContent` / `createElement` to prevent XSS.
 5. **Mobile-first.** Design for ~360px wide Android phones on slow mobile data first. Touch targets ≥ 44px. Base font ≥ 16px.
 6. **Fast and light.** Customer page should be usable quickly on 3G. Images in `.webp`, ideally under 100 KB each. No heavy libraries. The only external requests allowed are the Montserrat Google Font, Firestore's REST API (customer page), and the pinned Firebase SDK from gstatic + Firebase itself (admin page only). See Tech stack.
 7. **Graceful failure.** If Firestore can't be reached, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
 8. **Prices** are stored as whole-rupee integers (LKR) and displayed as `Rs. 1,250`.
 9. **Wrap all `localStorage` access in try/catch** — it can be unavailable.
-10. Do not change the menu data shape (`menu/published`: `settings`, `categories`, `items`, `updatedAt`; same shape as `firebase/menu-seed.json`) or the security rules without updating `docs/PROJECT_SPEC.md` and telling the developer.
+10. Do not change the menu data shape (`menu/published`: `settings`, `categories` = **map of sections keyed by permanent id** `cat_…`, `items` with **`category_id`**, `updatedAt`; same shape as `firebase/menu-seed.json`) or the security rules without updating `docs/PROJECT_SPEC.md` and telling the developer. Code that reads sections must go through `sectionList()` / `dishInSection()` in `js/utils.js` (they also handle the old list format).
 11. **Brand look (customer menu):** dark theme only, black/white plus the logo red as the single accent colour. See "Visual style" in `docs/PROJECT_SPEC.md`.
 12. **No `Co-Authored-By` lines** (or any other AI attribution) in suggested commit messages.
 13. **No photo uploads.** The admin page never handles images. Dish photos, if ever added, are put in `images/` by the developer; the `image` field stays optional.
@@ -78,7 +78,7 @@ hotwokrestaurant.github.io/  ← repo root (the local folder may still be called
 ├── images/                  ← dish photos (.webp), icons, logo
 ├── firebase/firestore.rules ← security rules (pasted into the console)
 ├── firebase/menu-seed.json  ← starting menu data
-├── firebase/setup.html/.js/.css ← developer-only page: rule tests + loads the seed
+├── firebase/setup.html/.js/.css ← developer-only page: rule tests, load seed, restore backup, one-time sections upgrade
 ├── firebase/README.md       ← click-by-click Firebase setup
 ├── tools/generate-qr.js     ← Node script to create the printable QR
 └── docs/PROJECT_SPEC.md     ← full specification

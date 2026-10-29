@@ -4,7 +4,9 @@
 
 import { getSavedMenu, saveMenu, fetchLatestMenu } from './api.js';
 import { FALLBACK_PHONE, FIRST_LOAD_TIMEOUT_MS, REFRESH_TIMEOUT_MS } from './config.js';
-import { formatAmount, toBool, toPositiveNumber, normalizeText, createElement, clearElement } from './utils.js';
+import {
+  formatAmount, toBool, toPositiveNumber, normalizeText, createElement, clearElement, sectionList, dishInSection
+} from './utils.js';
 
 // Only simple image file names are allowed, e.g. "chicken-kottu.webp".
 const IMAGE_NAME_PATTERN = /^[a-z0-9_-]+\.(webp|jpg|jpeg|png)$/i;
@@ -21,18 +23,19 @@ function prepareMenu(data) {
   const settings = data.settings || {};
   const showSoldOut = toBool(settings.show_sold_out);
 
-  const categories = (data.categories || [])
-    .filter((category) => toBool(category.visible))
-    .sort((a, b) => a.sort_order - b.sort_order);
+  // Sections in their set order (works with both the new map format and the
+  // older list format, see sectionList in utils.js). Hidden ones are skipped.
+  const sections = sectionList(data.categories).filter((section) => toBool(section.visible));
 
   const items = (data.items || [])
     .filter((item) => showSoldOut || toBool(item.available))
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  const groups = categories
-    .map((category) => ({
-      name: category.name,
-      items: items.filter((item) => item.category === category.name)
+  // A dish whose section is hidden or missing simply isn't shown.
+  const groups = sections
+    .map((section) => ({
+      name: section.name,
+      items: items.filter((item) => dishInSection(item, section))
     }))
     .filter((group) => group.items.length > 0);
 
