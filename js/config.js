@@ -9,12 +9,13 @@
 // (Step-by-step: firebase/README.md, step B.)
 
 export const FIREBASE_CONFIG = {
-  apiKey: 'PASTE_API_KEY_HERE',
-  authDomain: 'PASTE_PROJECT_ID.firebaseapp.com',
-  projectId: 'PASTE_PROJECT_ID',
-  storageBucket: 'PASTE_PROJECT_ID.firebasestorage.app',
-  messagingSenderId: 'PASTE_SENDER_ID',
-  appId: 'PASTE_APP_ID'
+  apiKey: 'AIzaSyBC4zRs_M5BeP5fKTsVp5rpT5y8EqjRn1g',
+  authDomain: 'hot-wok-menu-c0ab6.firebaseapp.com',
+  projectId: 'hot-wok-menu-c0ab6',
+  storageBucket: 'hot-wok-menu-c0ab6.firebasestorage.app',
+  messagingSenderId: '59860581923',
+  appId: '1:59860581923:web:c37a953c04fa359ca7fb96'
+  // measurementId (Google Analytics) left out on purpose: the menu doesn't use Analytics.
 };
 
 // Where the published menu lives in Firestore: collection "menu", document "published".
