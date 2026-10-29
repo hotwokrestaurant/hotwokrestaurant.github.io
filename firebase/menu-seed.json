@@ -2,11 +2,14 @@
   "settings": {
     "restaurant_name": "Hot Wok Restaurant",
     "tagline": "Authentic Chinese & Sri Lankan favourites",
-    "phone": "+94 XX XXX XXXX",
-    "address": "(Address to be provided)",
-    "opening_hours": "(Opening hours to be provided)",
-    "map_url": "https://maps.google.com/?q=Hot+Wok+Restaurant",
-    "notice": "Sample menu – prices are placeholders",
+    "phone": "+94 70 270 1009",
+    "whatsapp": "+94 70 270 1009",
+    "email": "hotwoknonagama@gmail.com",
+    "address": "178/2, Nonagama, Ambalantota, Lunama, Southern Province, Sri Lanka",
+    "opening_hours": "Monday – Sunday\n11:30 AM – 11:30 PM",
+    "map_url": "https://maps.app.goo.gl/GUqyknrxPBy4MXMQ8",
+    "facebook_url": "https://www.facebook.com/p/Hot-Wok-Restaurant-100068238776368/",
+    "notice": "",
     "show_sold_out": false
   },
   "categories": {

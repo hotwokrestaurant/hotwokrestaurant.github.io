@@ -736,21 +736,19 @@ a {
   text-align: center;
 }
 
-/* Thin-line wok with rising steam (viewBox 64×40). */
-.site-footer__art {
-  display: block;
-  width: 100px;
-  height: 62.5px;
-  margin: 0 auto var(--space-5);
-  color: var(--color-ornament);
+/* Hairline + small line-art flame + hairline, like the section dividers. */
+.site-footer__divider {
+  margin-bottom: var(--space-6);
 }
 
 .site-footer__block {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
+/* Small uppercase heading framed by short hairlines: "— OPENING HOURS —". */
 .site-footer__heading {
-  margin-bottom: var(--space-1);
+  --frame-line: 24px;
+  margin-bottom: var(--space-2);
   color: var(--color-text-muted);
   font-size: 0.8125rem;
   font-weight: 600;
@@ -758,12 +756,40 @@ a {
   text-transform: uppercase;
 }
 
-.site-footer__actions {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 320px;
-  margin: 0 auto var(--space-6);
+/* Opening hours and address keep their line breaks ("Monday – Sunday" / "11:30 AM – 11:30 PM"). */
+.site-footer__text {
+  white-space: pre-line;
+}
+
+/* The phone number as plain text, for people who want to save it. */
+.site-footer__phone {
+  margin-bottom: var(--space-3);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Call · WhatsApp · Email · Facebook: a tidy row that wraps on small screens
+   (2 × 2 on a 360px phone; one per line with very large text). */
+.contact-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(9em, 100%), 1fr));
+  grid-gap: var(--space-3);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.contact-button {
+  padding: 0 var(--space-3);
+}
+
+.contact-button__icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-right: var(--space-2);
 }
 
 /* "—— Prices may change without notice ——" as a quiet closing mark. */
@@ -809,7 +835,7 @@ a {
 }
 
 .text-link {
-  margin-top: var(--space-2);        /* space below the Call button */
+  margin-top: var(--space-1);
   display: inline-flex;
   align-items: center;
   min-height: var(--tap-size);

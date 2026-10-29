@@ -283,22 +283,49 @@ function renderFooter(settings) {
   document.getElementById('address').textContent = settings.address || '';
   addressBlock.hidden = !settings.address;
 
-  const callButton = document.getElementById('call-button');
-  if (settings.phone) {
-    callButton.href = phoneLink(settings.phone);
-    document.getElementById('call-label').textContent = `Call us · ${settings.phone}`;
-  }
-  callButton.hidden = !settings.phone;
+  setLink('map-link', isHttpsLink(settings.map_url) ? settings.map_url : '');
 
-  const mapLink = document.getElementById('map-link');
-  const hasMap = Boolean(settings.map_url) && String(settings.map_url).startsWith('https://');
-  if (hasMap) mapLink.href = settings.map_url;
-  mapLink.hidden = !hasMap;
+  // Contact: the number as text, plus Call / WhatsApp / Email / Facebook buttons.
+  const phone = String(settings.phone || '').trim();
+  const whatsapp = String(settings.whatsapp || '').trim();
+  const email = String(settings.email || '').trim();
+  const phoneText = document.getElementById('phone-text');
+  phoneText.textContent = phone;
+  phoneText.hidden = !phone;
+  setLink('call-button', phone ? phoneLink(phone) : '');
+  setLink('whatsapp-button', whatsapp ? whatsappLink(whatsapp) : '');
+  setLink('email-button', isEmail(email) ? `mailto:${email}` : '');
+  setLink('facebook-button', isHttpsLink(settings.facebook_url) ? settings.facebook_url : '');
+
+  const anyContact = ['call-button', 'whatsapp-button', 'email-button', 'facebook-button']
+    .some((id) => !document.getElementById(id).hidden);
+  document.getElementById('contact-block').hidden = !anyContact && !phone;
+}
+
+// Shows a link with this address, or hides it when the address is empty.
+function setLink(id, href) {
+  const link = document.getElementById(id);
+  if (href) link.href = href;
+  link.hidden = !href;
+}
+
+function isHttpsLink(url) {
+  return Boolean(url) && /^https:\/\/\S+$/.test(String(url));
+}
+
+function isEmail(text) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(text);
 }
 
 // "tel:" links open the phone dialler. Keep only digits and a leading +.
 function phoneLink(phone) {
   return `tel:${String(phone).replace(/[^\d+]/g, '')}`;
+}
+
+// WhatsApp chat link: wa.me + the number with country code, digits only
+// ("+94 70 270 1009" → https://wa.me/94702701009).
+function whatsappLink(number) {
+  return `https://wa.me/${String(number).replace(/\D/g, '')}`;
 }
 
 // ---------- Interactions ----------

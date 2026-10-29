@@ -282,6 +282,33 @@ onClick('test-invalid', async () => {
   }
 });
 
+// ---------- 7. Real restaurant details → live menu ----------
+// One transaction that changes ONLY these settings (and clears the old sample
+// notice); dishes, sections and the other settings stay exactly as they are.
+
+const CONTACT_KEYS = ['phone', 'whatsapp', 'email', 'address', 'opening_hours', 'map_url', 'facebook_url'];
+const SAMPLE_NOTICE = 'Sample menu – prices are placeholders';
+
+onClick('apply-details', async () => {
+  if (!auth.currentUser) { log('Sign in as the owner first (step 2).'); return; }
+  const response = await fetch('menu-seed.json', { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not load menu-seed.json (${response.status})`);
+  const seedSettings = (await response.json()).settings;
+  try {
+    await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(menuRef);
+      if (!snapshot.exists()) throw new Error('there is no menu yet (step 3)');
+      const settings = { ...snapshot.data().settings };
+      CONTACT_KEYS.forEach((key) => { settings[key] = seedSettings[key]; });
+      if (settings.notice === SAMPLE_NOTICE) settings.notice = '';
+      transaction.update(menuRef, { settings, updatedAt: serverTimestamp() });
+    });
+    log(`PASS — restaurant details updated: ${CONTACT_KEYS.map((key) => `${key}: ${JSON.stringify(seedSettings[key])}`).join(' · ')}`, 'pass');
+  } catch (error) {
+    log(`FAIL — details not changed. ${describeError(error)} (Are the latest rules published?)`, 'fail');
+  }
+});
+
 // ---------- 6. One-time upgrade: menu sections with ids ----------
 // Old format → current format, in steps the new rules accept. Each step is a
 // transaction on the LATEST menu, so it's safe even if the owner edits at the

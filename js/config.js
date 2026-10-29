@@ -24,8 +24,8 @@ export const MENU_DOC_ID = 'published';
 
 // Phone number shown on the "menu couldn't load" message, for when there is
 // no saved menu to take the number from (first visit + no connection).
-// TODO: replace with the restaurant's real number (same as settings.phone).
-export const FALLBACK_PHONE = '+94 XX XXX XXXX';
+// (Same as settings.phone; update both if the number ever changes.)
+export const FALLBACK_PHONE = '+94 70 270 1009';
 
 // How long to wait for Firestore before giving up (milliseconds).
 // First visit (nothing saved yet): wait longer, slow 3G can need ~10 s.

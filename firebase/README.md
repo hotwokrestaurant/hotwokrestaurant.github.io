@@ -195,7 +195,7 @@ Run these on the setup page (step G). Each one should say **PASS**:
    - Change the simulation type to **create** and add any document data.
    - Click **Run**. Expected: red, **denied**.
 
-**Already tested before you got this file:** the rules passed **84 checks** in the official Firestore emulator, plus a step-limit test of every kind of save with 25 sections and 150 dishes. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
+**Already tested before you got this file:** the rules passed **110 checks** in the official Firestore emulator, plus a step-limit test of every kind of save with 25 sections and 150 dishes. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
 - **Reads:** signed-out reads (allowed); listing the collection and reading other documents (denied).
 - **Who can write:** signed-out visitors and signed-in non-owners (denied); creating the menu with dishes in the same save (denied).
 - **Loading the menu:** creating it without dishes, then loading the 18 dishes 3 at a time (allowed); a 4-dish save (denied).
@@ -216,6 +216,7 @@ Run these on the setup page (step G). Each one should say **PASS**:
 - **Sections:** add, rename, reorder, hide, delete an empty one, 30-character names (allowed).
 - **The one-time sections upgrade** (old format → section ids): each step allowed, mistakes refused, and the result equals `menu-seed.json`.
   - A non-server `updatedAt`, a `javascript:` map link, and deleting the menu.
+- **Contact details:** the real details and old menus without WhatsApp/email/Facebook (allowed); a phone or WhatsApp number with letters, a bad email, an `http://` or `javascript:` Facebook link, a link with spaces, an unknown settings field (denied).
 - **Allowed saves stay under the 1,000-step limit** with both 18 and 150 dishes.
 - **The `admins` allow-list can't be changed from any app.** A stranger can't add, change or delete an `admins` document (not even one for themselves), and neither can a signed-out visitor or the owner's own account. A signed-in account can only *check its own* entry (the admin page uses this to show "This account can't edit the menu"); it can't read anyone else's or list them.
 - **Two phones editing at the same time:** two transactions that each change a different dish at the same moment both keep their change. A transaction that changes only `settings` leaves dishes and categories untouched. (This is the pattern the admin page will use; see the spec, section 4.3.)
@@ -243,6 +244,22 @@ Menus loaded before the "Menu sections" feature store sections without ids. Run 
 **If something goes wrong:**
 - Click **2. Upgrade the menu** again; it continues where it stopped.
 - Or restore the backup with **step 5** (tick **Replace…** in step 3 first). Old-format backups are converted automatically.
+
+## Putting the real restaurant details live
+
+The footer shows the phone, WhatsApp, email, address, opening hours, Google Maps and Facebook links from the menu's `settings`. The real values are in `firebase/menu-seed.json`. Two safe ways to put them into the live menu (neither touches dishes or sections):
+
+**Easiest (one click), on your computer:**
+1. **Push the new code** and wait 1–2 minutes for GitHub Pages.
+2. **Publish the new rules** (Firestore Database → Rules → paste `firebase/firestore.rules` → **Publish**). Wait 1 minute. Without this, the save is refused.
+3. Run `python -m http.server 8000` in the project folder and open **http://localhost:8000/firebase/setup.html**.
+4. **Step 2:** sign in with the owner account.
+5. **Step 7:** click **Update restaurant details**. The log ends with **"PASS — restaurant details updated: …"**. It also removes the old "Sample menu – prices are placeholders" notice.
+6. Open https://hotwokrestaurant.github.io/, scroll to the bottom and check every button (see below). Click **Sign out**, stop the server (**Ctrl+C**).
+
+**Or from a phone:** after steps 1–2, open the admin page → **More → Restaurant details**, type each value, clear the notice, and press **Save**.
+
+**Check on a phone:** **Call** opens the dialler with +94 70 270 1009, **WhatsApp** opens a chat with that number, **Email** opens the mail app addressed to hotwoknonagama@gmail.com, and **Facebook** and **Directions** open the right pages.
 
 ## Before going live (checklist)
 

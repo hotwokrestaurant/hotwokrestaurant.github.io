@@ -95,18 +95,21 @@ Deleting a section also deletes all its dishes, in **one** save, so no dish is e
 
 ### 3.4 Settings: the `settings` map
 
-| key | type, limit | value (placeholder) |
+| key | type, limit | value |
 |---|---|---|
 | `restaurant_name` | string, 1–60 | Hot Wok Restaurant |
 | `tagline` | string, ≤ 80 | Authentic Chinese & Sri Lankan favourites |
-| `phone` | string, ≤ 30 | +94 XX XXX XXXX |
-| `address` | string, ≤ 150 | (to be provided) |
-| `opening_hours` | string, ≤ 150 | (to be provided) |
-| `map_url` | string, ≤ 300, `''` or `https://…` | (Google Maps share link) |
-| `notice` | string, ≤ 120 | Optional banner text, e.g. "Closed on Poya day" |
+| `phone` | string, ≤ 30, digits, `+` and spaces only | +94 70 270 1009 |
+| `whatsapp` | *optional*, string, ≤ 30, digits, `+` and spaces only | +94 70 270 1009 |
+| `email` | *optional*, string, `''` or a simple `name@domain.tld` | hotwoknonagama@gmail.com |
+| `address` | string, ≤ 150 (may have line breaks) | 178/2, Nonagama, Ambalantota, Lunama, Southern Province, Sri Lanka |
+| `opening_hours` | string, ≤ 150 (may have line breaks) | Monday – Sunday⏎11:30 AM – 11:30 PM |
+| `map_url` | string, ≤ 300, `''` or `https://…` (no spaces) | https://maps.app.goo.gl/GUqyknrxPBy4MXMQ8 |
+| `facebook_url` | *optional*, string, ≤ 300, `''` or `https://…` (no spaces) | https://www.facebook.com/p/Hot-Wok-Restaurant-100068238776368/ |
+| `notice` | string, ≤ 120 | `''`. Optional banner text, e.g. "Closed on Poya day" |
 | `show_sold_out` | boolean | `false` (`true` = show sold-out items faded instead of hiding them) |
 
-All eight keys must be present (use `''` for "none").
+The eight original keys must always be present (use `''` for "none"). `whatsapp`, `email` and `facebook_url` are optional, so menus saved before they existed stay valid; the admin page always saves all eleven. An empty value hides that button on the customer page. The WhatsApp button links to `https://wa.me/<digits only>`.
 
 ### 3.5 The owner allow-list: `admins/{uid}`
 
@@ -159,7 +162,7 @@ Stored in `firebase/menu-seed.json` (current format: section ids `cat_friedrice`
 4. On success: redraw **only if the menu changed** (`updatedAt` differs, or the contents differ, which catches hand edits in the Firebase console that don't touch `updatedAt`), and save to `localStorage` (try/catch). A redraw keeps any search text and skips the fade-in.
 5. On failure (offline, timeout, missing/invalid data): with a saved menu, show the small note "Showing saved menu · updated 29 Oct"; with none, show a friendly message with **Try again** and **Call us** (number from `FALLBACK_PHONE` in `js/config.js`). When the phone comes back online, the menu quietly retries.
 6. Filtering stays in the browser: only `visible` categories; only `available` items unless `show_sold_out`.
-7. **No sample data in the live site.** All text, including the "Sample menu – prices are placeholders" notice, comes from `settings` in Firestore. `js/sample-data.js` was removed in Phase 3; `firebase/menu-seed.json` is the reference data.
+7. **No sample data in the live site.** All text, including the notice and the footer details, comes from `settings` in Firestore (the seed no longer has a "Sample menu" notice). `js/sample-data.js` was removed in Phase 3; `firebase/menu-seed.json` is the reference data.
 8. A fully offline **first** page load can't work without a service worker (not in v1). "Offline" here means the page itself loaded (from the network or the browser's cache) but Firestore couldn't be reached.
 
 Measured (headless Chrome against the live project, 412px wide). The REST fetch replaced Firestore Lite because it was clearly faster on first visits and behaved the same in every failure test:
@@ -224,7 +227,8 @@ await runTransaction(db, async (tx) => {
 - **Deleting a section with its dishes** is one allowed save (removals aren't checked); **Undo** re-adds dishes 3 per save, each fully checked. Measured with 25 sections and 150 dishes: deleting a section with 6 or 20 dishes, and every Undo step, fits under the 1,000-step limit.
 - **`admins` is write-locked for every app** (`allow list, write: if false`). A signed-in account can only `get` its own entry (`request.auth.uid == uid`), which the admin page uses after login. Only the Firebase console can change it, so an account created through the Auth API can't add itself. Public sign-up is also turned off in Authentication → Settings → User actions, where the console offers it.
 - No deletes of the menu document. Everything not matched is denied.
-- Tested in the Firestore emulator (95 checks, all passing, including the `admins` lockdown, own-entry reads, simultaneous transactions, sections, deleting sections with 0/1/5/20 dishes and undoing them, and the one-time upgrade) plus the 25-section/150-dish step-limit test (23 kinds of save) before handover; manual tests are in `firebase/README.md`.
+- **Settings checks:** phone and WhatsApp only digits, `+` and spaces (≤ 30); email empty or a simple `name@domain.tld`; map and Facebook links empty or `https://` with no spaces (≤ 300); the optional keys are checked only when present. Each is one pattern, so "settings + 3 dishes" still fits under 1,000 steps.
+- Tested in the Firestore emulator (110 checks, all passing, including the `admins` lockdown, own-entry reads, simultaneous transactions, sections, deleting sections with 0/1/5/20 dishes and undoing them, the one-time upgrade, and the contact fields) plus the 25-section/150-dish step-limit test (23 kinds of save) before handover; manual tests are in `firebase/README.md`.
 
 ### 4.5 Owner authentication
 - Email/password. The owner's account is created by hand in the console. **No sign-up flow** in the app (and "Enable create (sign-up)" is turned off in the console where available).
@@ -256,6 +260,8 @@ During the switch-over:
 - **The admin page shows "The menu needs a one-time update"** until the upgrade is done.
 - **The new rules accept the upgrade steps:** unchanged old-format dishes aren't re-checked, and every converted dish must point to an existing section.
 
+**Real restaurant details:** `firebase/setup.html` step 7 copies `phone`, `whatsapp`, `email`, `address`, `opening_hours`, `map_url` and `facebook_url` from `menu-seed.json` into the live `settings` in one transaction (`tx.update` of `settings` only). It also clears the old "Sample menu – prices are placeholders" notice. Dishes and sections are untouched. The owner can also type them in **Restaurant details**. The fallback phone for the error screen is `FALLBACK_PHONE` in `js/config.js` (+94 70 270 1009).
+
 Tested on the emulator: the customer menu was identical before and after, the result equals `menu-seed.json`, and running it twice was harmless.
 
 ### 4.10 Free limits (Spark)
@@ -277,7 +283,12 @@ Tested on the emulator: the customer menu was identical before and after, the re
    - Small inline SVG icons after the name: flame (spicy), leaf (veg), star (chef's special), each with a visually hidden text label.
    - Photo (if any) as a 72px rounded thumbnail on the left, lazy-loaded with fixed size. If any dish in a category has a photo, rows without one keep the same indent.
    - Sold-out items: hidden, or faded with "Sold out today" if `show_sold_out` is TRUE.
-5. **Footer:** opening hours, address, "Call us" button (outlined; red while pressed), "Directions" link (Google Maps), small "Prices may change" note, small developer credit.
+5. **Footer**, centred, from top to bottom:
+   - Divider: hairline + small flame + hairline.
+   - **OPENING HOURS** (framed heading like the section titles), then the hours (line breaks kept).
+   - **FIND US**: the address and a **Directions** link (Google Maps).
+   - **CONTACT**: the phone number as text, then **Call / WhatsApp / Email / Facebook** buttons with small line icons (inline SVG). They are outlined white and turn red while pressed, at least 48px tall, 2 × 2 on a 360px phone, and one per line on very narrow screens or with large text. A button with an empty value is hidden; the whole block hides if all are empty.
+   - Closing mark: "Prices may change without notice." No developer credit.
 6. **Back-to-top** button after scrolling (small dark circle, white arrow).
 
 ### Behaviour
@@ -315,7 +326,7 @@ Files: `admin.html`, `css/admin.css`, `js/admin.js` (screens and UI), `js/admin-
    - Bottom ("More"): **Restaurant details**, **Download backup**, **View customer menu**.
    - Other phones' changes appear live (the page listens for menu changes).
 4. **Dish form** (full-screen; the phone's Back button closes it): name (≤ 60), category, price, large price (optional), description (≤ 150, live "letters left" counter), Spicy / Vegetarian / Chef's special. Prices accept "1,250". **Save** / **Cancel** stay visible at the bottom. On edit, red **Delete this dish** with a confirmation naming the dish. **No photo field.**
-5. **Restaurant details form:** notice, opening hours, phone, address, Google Maps link (must be `https://…`). Other settings (name, tagline, show sold out) are kept unchanged.
+5. **Restaurant details form:** notice, opening hours, phone, WhatsApp, email, address, Google Maps link, Facebook link. It checks the same rules as `firestore.rules`, with plain messages: phone/WhatsApp only numbers, spaces and +; email like name@gmail.com; links start with `https://` and have no spaces. Other settings (name, tagline, show sold out) are kept unchanged.
 6. **Menu sections** (main screen → More → Menu sections): sections in menu order. Each row shows the name and dish count ("5 dishes", "Hidden"), a big **"Shown on menu" ON/OFF switch**, ↑ ↓ arrows (the tab order on the customer menu), **Rename** and **Delete** (red outline).
    - **+ Add a section** / **Rename** open a small form: name up to 30 letters; duplicates are refused, ignoring capitals ("There is already a section called "Kottu"").
    - **Delete** an empty section: simple confirmation naming it. A section **with dishes** opens a full-screen dialog:

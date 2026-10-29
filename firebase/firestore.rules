@@ -46,21 +46,30 @@ service cloud.firestore {
 
     // ---------- Settings (checked only when changed) ----------
 
-    // Exactly these 8 fields: each one must exist with the right type, and the
-    // count must be 8, so no unknown field can sneak in.
+    // 8 required fields + up to 3 optional contact fields (whatsapp, email,
+    // facebook_url; older menus don't have them). Each one is checked, and
+    // the field count must match exactly, so no unknown field can sneak in.
     function validSettings(s) {
       // Text is checked with one pattern each: .{1,60} = 1 to 60 characters
       // (fails for anything that isn't text). (?s) also allows line breaks.
       return s.keys().size() == 8
+             + ('whatsapp' in s ? 1 : 0)
+             + ('email' in s ? 1 : 0)
+             + ('facebook_url' in s ? 1 : 0)
         && s.restaurant_name.matches('.{1,60}')
         && s.tagline.matches('.{0,80}')
-        && s.phone.matches('.{0,30}')
+        // Phone numbers: digits, + and spaces only (or empty).
+        && s.phone.matches('[0-9+ ]{0,30}')
         && s.address.matches('(?s).{0,150}')
         && s.opening_hours.matches('(?s).{0,150}')
         && s.notice.matches('.{0,120}')
-        // Map link: empty, or an https:// address with no spaces (max 300).
+        // Links: empty, or an https:// address with no spaces (max 300).
         && s.map_url.matches('(https://[^ ]{1,292})?')
-        && s.show_sold_out is bool;
+        && s.show_sold_out is bool
+        && (!('whatsapp' in s) || s.whatsapp.matches('[0-9+ ]{0,30}'))
+        // Email: empty, or a simple name@domain.tld shape.
+        && (!('email' in s) || s.email.matches('([^@ ]{1,64}@[^@ ]{1,60}[.][A-Za-z]{2,20})?'))
+        && (!('facebook_url' in s) || s.facebook_url.matches('(https://[^ ]{1,292})?'));
     }
 
     // ---------- Menu sections (only new or changed ones are checked) ----------

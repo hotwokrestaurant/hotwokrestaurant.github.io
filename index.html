@@ -48,18 +48,24 @@
     <symbol id="icon-flame-line" viewBox="0 0 24 24">
       <path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M12 2.5c.4 2.9-1 4.6-2.6 6.3C7.8 10.5 6.5 12.3 6.5 15a5.5 5.5 0 0 0 11 0c0-2.2-.9-3.9-2.2-5.3-.3 1.3-1 2.3-2.1 2.8.5-3.4-.3-7-1.2-10Z"/>
     </symbol>
-    <symbol id="icon-wok-steam" viewBox="0 0 64 40">
-      <g fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
-        <!-- steam -->
-        <path d="M25 16c-2-2.5 2-4.5 0-7s2-4.5 0-6"/>
-        <path d="M32 17c-2-2.5 2-4.5 0-7s2-4.5 0-7"/>
-        <path d="M39 16c-2-2.5 2-4.5 0-7s2-4.5 0-6"/>
-        <!-- wok: rim, bowl, long handle, small side handle -->
-        <path d="M8 22h48"/>
-        <path d="M11 22c2 8.5 10 13 21 13s19-4.5 21-13"/>
-        <path d="M54.5 25.5 63 23"/>
-        <path d="M10.5 25c-2.2 0-4 .8-4 2s1.8 2 4 2"/>
+    <!-- Contact icons: thin line drawings (stroke only). -->
+    <symbol id="icon-phone" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M6.6 3.5h2.3l1.4 4-1.8 1.4a11 11 0 0 0 6.6 6.6l1.4-1.8 4 1.4v2.3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z"/>
+    </symbol>
+    <symbol id="icon-chat" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3.5a8.5 8.5 0 0 0-7.4 12.7L3.5 20.5l4.4-1.1A8.5 8.5 0 1 0 12 3.5Z"/>
+        <path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-1.8-.9-.8.8a4 4 0 0 1-2.3-2.3l.8-.8-.9-1.8Z"/>
       </g>
+    </symbol>
+    <symbol id="icon-mail" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+        <rect x="3.5" y="5.5" width="17" height="13" rx="1.5"/>
+        <path d="M4 6.5l8 6.5 8-6.5"/>
+      </g>
+    </symbol>
+    <symbol id="icon-facebook" viewBox="0 0 24 24">
+      <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M15 3.5h-2.2A3.8 3.8 0 0 0 9 7.3V10H6.8v3H9v7.5h3.2V13h2.6l.5-3h-3.1V7.6c0-.5.4-.9.9-.9H15Z"/>
     </symbol>
     <symbol id="icon-arrow-up" viewBox="0 0 24 24">
       <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>
@@ -120,24 +126,44 @@
     <p id="no-results" class="no-results" role="status" hidden>No dishes found.</p>
   </main>
 
+  <!-- Footer: every detail comes from the menu's settings (editable in the admin
+       page); blocks and buttons stay hidden when a detail is empty. -->
   <footer class="site-footer">
-    <svg class="site-footer__art" aria-hidden="true" focusable="false"><use href="#icon-wok-steam"/></svg>
+    <div class="menu-divider line-frame site-footer__divider" aria-hidden="true">
+      <svg class="icon menu-divider__icon" focusable="false"><use href="#icon-flame-line"/></svg>
+    </div>
+
     <div id="hours-block" class="site-footer__block" hidden>
-      <h2 class="site-footer__heading">Opening hours</h2>
-      <p id="opening-hours"></p>
+      <h2 class="site-footer__heading line-frame"><span>Opening hours</span></h2>
+      <p id="opening-hours" class="site-footer__text"></p>
     </div>
+
     <div id="address-block" class="site-footer__block" hidden>
-      <h2 class="site-footer__heading">Find us</h2>
-      <p id="address"></p>
-    </div>
-    <div class="site-footer__actions">
-      <a id="call-button" class="button" href="#" hidden>
-        <span id="call-label">Call us</span>
-      </a>
+      <h2 class="site-footer__heading line-frame"><span>Find us</span></h2>
+      <p id="address" class="site-footer__text"></p>
       <a id="map-link" class="text-link" href="#" target="_blank" rel="noopener" hidden>Directions</a>
     </div>
+
+    <div id="contact-block" class="site-footer__block" hidden>
+      <h2 class="site-footer__heading line-frame"><span>Contact</span></h2>
+      <p id="phone-text" class="site-footer__phone" hidden></p>
+      <div class="contact-buttons">
+        <a id="call-button" class="button contact-button" href="#" hidden>
+          <svg class="contact-button__icon" aria-hidden="true" focusable="false"><use href="#icon-phone"/></svg>Call
+        </a>
+        <a id="whatsapp-button" class="button contact-button" href="#" target="_blank" rel="noopener" hidden>
+          <svg class="contact-button__icon" aria-hidden="true" focusable="false"><use href="#icon-chat"/></svg>WhatsApp
+        </a>
+        <a id="email-button" class="button contact-button" href="#" hidden>
+          <svg class="contact-button__icon" aria-hidden="true" focusable="false"><use href="#icon-mail"/></svg>Email
+        </a>
+        <a id="facebook-button" class="button contact-button" href="#" target="_blank" rel="noopener" hidden>
+          <svg class="contact-button__icon" aria-hidden="true" focusable="false"><use href="#icon-facebook"/></svg>Facebook
+        </a>
+      </div>
+    </div>
+
     <p class="site-footer__small site-footer__closing line-frame"><span>Prices may change without notice.</span></p>
-    <p class="site-footer__small">Digital menu by Janana</p>
   </footer>
 
   <button id="back-to-top" class="back-to-top" type="button" aria-label="Back to top" hidden>

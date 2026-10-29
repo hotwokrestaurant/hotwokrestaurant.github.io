@@ -188,7 +188,15 @@
       <textarea id="set-hours" class="form__input form__textarea" rows="2" maxlength="150"></textarea>
 
       <label class="form__label" for="set-phone" data-i18n="phoneLabel"></label>
-      <input id="set-phone" class="form__input" type="tel" maxlength="30" autocomplete="off">
+      <input id="set-phone" class="form__input" type="tel" maxlength="30" autocomplete="off" aria-describedby="set-phone-hint">
+      <p class="form__hint" id="set-phone-hint" data-i18n="phoneHint"></p>
+
+      <label class="form__label" for="set-whatsapp" data-i18n="whatsappLabel"></label>
+      <input id="set-whatsapp" class="form__input" type="tel" maxlength="30" autocomplete="off" aria-describedby="set-whatsapp-hint">
+      <p class="form__hint" id="set-whatsapp-hint" data-i18n="whatsappHint"></p>
+
+      <label class="form__label" for="set-email" data-i18n="emailDetailLabel"></label>
+      <input id="set-email" class="form__input" type="email" maxlength="146" inputmode="email" autocomplete="off">
 
       <label class="form__label" for="set-address" data-i18n="addressLabel"></label>
       <textarea id="set-address" class="form__input form__textarea" rows="2" maxlength="150"></textarea>
@@ -196,6 +204,10 @@
       <label class="form__label" for="set-map" data-i18n="mapLabel"></label>
       <input id="set-map" class="form__input" type="url" maxlength="300" inputmode="url" autocomplete="off" aria-describedby="set-map-hint">
       <p class="form__hint" id="set-map-hint" data-i18n="mapHint"></p>
+
+      <label class="form__label" for="set-facebook" data-i18n="facebookLabel"></label>
+      <input id="set-facebook" class="form__input" type="url" maxlength="300" inputmode="url" autocomplete="off" aria-describedby="set-facebook-hint">
+      <p class="form__hint" id="set-facebook-hint" data-i18n="facebookHint"></p>
 
       <p id="details-error" class="form__error" role="alert" hidden></p>
 

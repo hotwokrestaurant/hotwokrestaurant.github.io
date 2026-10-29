@@ -25,6 +25,7 @@ const LIMITS = {
   notice: 120,
   hours: 150,
   phone: 30,
+  email: 146,           // 64 + @ + 60 + . + 20, as the rules' email pattern
   address: 150,
   mapUrl: 300,
   maxPrice: 100000
@@ -1049,11 +1050,19 @@ function openDetailsForm(returnFocusTo) {
   $('set-notice').value = settings.notice || '';
   $('set-hours').value = settings.opening_hours || '';
   $('set-phone').value = settings.phone || '';
+  $('set-whatsapp').value = settings.whatsapp || '';
+  $('set-email').value = settings.email || '';
   $('set-address').value = settings.address || '';
   $('set-map').value = settings.map_url || '';
+  $('set-facebook').value = settings.facebook_url || '';
   showFormError('details-error', '');
   openSheet('screen-details', $('set-notice'), returnFocusTo);
 }
+
+// Same checks as firebase/firestore.rules (the rules are the real check).
+const PHONE_PATTERN = /^[0-9+ ]*$/;
+const EMAIL_PATTERN = /^[^@ ]{1,64}@[^@ ]{1,60}\.[A-Za-z]{2,20}$/;
+const LINK_PATTERN = /^https:\/\/\S+$/;
 
 async function saveDetailsForm(event) {
   event.preventDefault();
@@ -1061,14 +1070,30 @@ async function saveDetailsForm(event) {
     notice: $('set-notice').value.trim(),
     opening_hours: $('set-hours').value.trim(),
     phone: $('set-phone').value.trim(),
+    whatsapp: $('set-whatsapp').value.trim(),
+    email: $('set-email').value.trim(),
     address: $('set-address').value.trim(),
-    map_url: $('set-map').value.trim()
+    map_url: $('set-map').value.trim(),
+    facebook_url: $('set-facebook').value.trim()
   };
-  const limits = { notice: LIMITS.notice, opening_hours: LIMITS.hours, phone: LIMITS.phone, address: LIMITS.address, map_url: LIMITS.mapUrl };
+  const limits = {
+    notice: LIMITS.notice,
+    opening_hours: LIMITS.hours,
+    phone: LIMITS.phone,
+    whatsapp: LIMITS.phone,
+    email: LIMITS.email,
+    address: LIMITS.address,
+    map_url: LIMITS.mapUrl,
+    facebook_url: LIMITS.mapUrl
+  };
   const tooLong = Object.keys(limits).find((key) => values[key].length > limits[key]);
   let error = '';
   if (tooLong) error = t('errorTooLong', { max: limits[tooLong] });
-  else if (values.map_url && !/^https:\/\/\S+$/.test(values.map_url)) error = t('errorMap');
+  else if (!PHONE_PATTERN.test(values.phone)) error = t('errorPhone');
+  else if (!PHONE_PATTERN.test(values.whatsapp)) error = t('errorWhatsapp');
+  else if (values.email && !EMAIL_PATTERN.test(values.email)) error = t('errorEmail');
+  else if (values.map_url && !LINK_PATTERN.test(values.map_url)) error = t('errorMap');
+  else if (values.facebook_url && !LINK_PATTERN.test(values.facebook_url)) error = t('errorFacebook');
   showFormError('details-error', error);
   if (error) return;
   if (!navigator.onLine) { showFormError('details-error', t('saveOffline')); return; }
@@ -1076,7 +1101,7 @@ async function saveDetailsForm(event) {
   const button = $('details-save');
   setBusy(button, true);
   try {
-    // Only these five details change; name, tagline etc. are kept as they are.
+    // Only these details change; name, tagline etc. are kept as they are.
     await saveSettings((settings) => ({ ...settings, ...values }));
     closeTopSheet();
     showToast(t('detailsSaved'));
