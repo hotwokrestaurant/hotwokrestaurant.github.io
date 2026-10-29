@@ -99,9 +99,22 @@ export function saveItems(change) {
   }), SAVE_TIMEOUT_MS);
 }
 
+// Runs `change(sections, items)` on the LATEST menu and saves BOTH, in one
+// transaction (all or nothing). Used to delete a section together with its
+// dishes: the rules allow removing any number of dishes in a section save,
+// because only new or changed dishes need checking.
+export function saveSectionsAndItems(change) {
+  return withTimeout(runTransaction(db, async (transaction) => {
+    const snapshot = await transaction.get(menuRef);
+    const { items, categories } = snapshot.data();
+    const result = change(copy(categories), copy(items));
+    transaction.update(menuRef, { categories: result.categories, items: result.items, updatedAt: serverTimestamp() });
+  }), SAVE_TIMEOUT_MS);
+}
+
 // Runs `change(sections, items)` on the LATEST menu and saves only the
 // sections map. `items` is passed so a change can check, at the very moment
-// of saving, e.g. that a section being deleted really has no dishes.
+// of saving, e.g. that a section being restored still exists.
 export function saveSections(change) {
   return withTimeout(runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(menuRef);

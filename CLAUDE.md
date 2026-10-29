@@ -53,7 +53,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 12. **No `Co-Authored-By` lines** (or any other AI attribution) in suggested commit messages.
 13. **No photo uploads.** The admin page never handles images. Dish photos, if ever added, are put in `images/` by the developer; the `image` field stays optional.
 14. **Customer page = no Firebase SDK.** It reads `menu/published` with one REST `fetch()` per visit (measured ~4 s faster on Slow 3G than Firestore Lite). Don't add SDK imports to the customer page. On the admin page, keep the Firebase SDK version identical in every import URL.
-15. **Admin writes never overwrite the menu document.** Every change is a `runTransaction` that reads the latest menu and `tx.update`s only the changed field (`items`, `settings` or `categories`) plus `updatedAt`. Never `setDoc` from the admin page (see spec 4.3).
+15. **Admin writes never overwrite the menu document.** Every change is a `runTransaction` that reads the latest menu and `tx.update`s only the changed field (`items`, `settings` or `categories`) plus `updatedAt`. Never `setDoc` from the admin page (see spec 4.3). The one exception to "one field": **deleting a section removes the section and its dishes in ONE transaction**, so no dish is ever left pointing to a missing section. **Undo** re-adds in safe, resumable steps (section hidden first → dishes 3 per save → original visibility), tracked in `localStorage` until finished.
 16. **Developer-only files are not published.** `_config.yml` excludes `firebase/`, `docs/`, `tools/`, `CLAUDE.md`, `README.md` from GitHub Pages. Never add `.nojekyll`. New developer-only folders must be added to that list.
 
 ## Project structure

@@ -91,7 +91,7 @@ Each section has a **permanent id** (the map key), managed by the owner in the a
 
 **Why a map and not a list:** the rules must check that every new or changed dish's `category_id` exists. With a map that's one cheap lookup (`category_id in categories`). With a list, it means walking the list, which costs about 25 rule steps per section and broke the 1,000-step limit with 15+ sections (measured).
 
-A section can be deleted only when it has no dishes. The admin page checks this inside the save transaction; the rules can't check it cheaply. A dish whose section is missing is never shown to customers, and appears in the admin page under "Not in a section".
+Deleting a section also deletes all its dishes, in **one** save, so no dish is ever left pointing to a missing section (see 4.3). The rules can't check this cheaply; the admin page guarantees it by removing both in the same transaction. If a dish's section were ever missing anyway, the customer page wouldn't show the dish, and the admin page would list it under "Not in a section".
 
 ### 3.4 Settings: the `settings` map
 
@@ -201,7 +201,13 @@ await runTransaction(db, async (tx) => {
   - rename: only `name` changes;
   - reorder: swap the `sort_order` of two neighbours;
   - show/hide: `visible`;
-  - delete: only if **no dish** has that `category_id`, re-checked on the latest menu inside the transaction, so a dish added on another phone a moment earlier blocks the delete. The last section can't be deleted.
+  - delete (`saveSectionsAndItems`): **one transaction removes the section and all its dishes** (all or nothing; a lost connection changes nothing). The rules allow it because removing dishes needs no checks; only new or changed dishes do. Inside the transaction the dishes in that section must be exactly the ones the owner saw listed; if another phone added or removed one meanwhile, it stops with "This section was just changed on another phone…". The last section can't be deleted.
+  - **Undo** (10 seconds after a delete): re-adding dishes must be fully checked (3 per save), so it runs in safe, repeatable steps:
+    1. the section comes back **hidden**, with its original id, name and order;
+    2. its dishes come back 3 per save, with original ids, details and order (only the missing ones);
+    3. the section is switched back to its original visibility.
+
+    Customers never see a half-restored section, and dishes always point to an existing section. A progress message shows "Bringing back "Kottu"… 6 of 20 dishes". What's needed to finish is kept on the phone (`localStorage`, key `hotwok.admin.pendingUndo`). If the connection drops, the message says "…stopped: 6 of 20 dishes are back… tap Continue". After a reload, the admin page offers to finish ("…was only partly brought back… Continue").
   - Names are checked for duplicates (ignoring capitals) on screen and again inside the transaction.
 - Frontend validation mirrors the rules (same limits) so the owner gets friendly messages, but the **rules are the real check**.
 
@@ -214,10 +220,11 @@ await runTransaction(db, async (tx) => {
   - Every **new or changed** dish fully validated: types, name ≤ 60, description ≤ 150, prices positive integers, `category_id` must exist in `categories` (one map lookup), safe image name, no unknown fields.
 - **Why only changed data:** rules have no loops, so they can't check every dish or section in a list. They compute `newItems.removeAll(oldItems)` (and the same for section values and ids), cap the count, and validate each. Settings are likewise only checked when they change. Every value is therefore validated when it's written.
 - **Why the limits are 3 dishes, 10 sections, and "sections alone":** Firestore stops evaluating a rule after 1,000 steps, and it counts every small step. Measured in the emulator with **25 sections and 150 dishes**, every allowed kind of save fits: add, rename, reorder, hide, show and delete a section; 10 sections at once; add, edit or move a dish (in the last section); 3 dishes; settings + 3 dishes. Text is checked with one pattern each (e.g. `name.matches('.{1,30}')`) to keep the cost down.
-- **Not checked by the rules (too expensive without loops):** unique section names, and that a deleted section has no dishes. The admin page checks both inside its save transaction.
+- **Not checked by the rules (too expensive without loops):** unique section names, and that no dish is left pointing to a deleted section. The admin page ensures both inside its save transaction (a section is always deleted together with its dishes).
+- **Deleting a section with its dishes** is one allowed save (removals aren't checked); **Undo** re-adds dishes 3 per save, each fully checked. Measured with 25 sections and 150 dishes: deleting a section with 6 or 20 dishes, and every Undo step, fits under the 1,000-step limit.
 - **`admins` is write-locked for every app** (`allow list, write: if false`). A signed-in account can only `get` its own entry (`request.auth.uid == uid`), which the admin page uses after login. Only the Firebase console can change it, so an account created through the Auth API can't add itself. Public sign-up is also turned off in Authentication → Settings → User actions, where the console offers it.
 - No deletes of the menu document. Everything not matched is denied.
-- Tested in the Firestore emulator (84 checks, all passing, including the `admins` lockdown, own-entry reads, simultaneous transactions, sections and the one-time upgrade) plus the 25-section/150-dish step-limit test before handover; manual tests are in `firebase/README.md`.
+- Tested in the Firestore emulator (95 checks, all passing, including the `admins` lockdown, own-entry reads, simultaneous transactions, sections, deleting sections with 0/1/5/20 dishes and undoing them, and the one-time upgrade) plus the 25-section/150-dish step-limit test (23 kinds of save) before handover; manual tests are in `firebase/README.md`.
 
 ### 4.5 Owner authentication
 - Email/password. The owner's account is created by hand in the console. **No sign-up flow** in the app (and "Enable create (sign-up)" is turned off in the console where available).
@@ -311,7 +318,12 @@ Files: `admin.html`, `css/admin.css`, `js/admin.js` (screens and UI), `js/admin-
 5. **Restaurant details form:** notice, opening hours, phone, address, Google Maps link (must be `https://…`). Other settings (name, tagline, show sold out) are kept unchanged.
 6. **Menu sections** (main screen → More → Menu sections): sections in menu order. Each row shows the name and dish count ("5 dishes", "Hidden"), a big **"Shown on menu" ON/OFF switch**, ↑ ↓ arrows (the tab order on the customer menu), **Rename** and **Delete** (red outline).
    - **+ Add a section** / **Rename** open a small form: name up to 30 letters; duplicates are refused, ignoring capitals ("There is already a section called "Kottu"").
-   - **Delete** works only for an empty section, with a confirmation naming it. Otherwise: "This section has 3 dishes. Move or delete them first, or switch the section OFF to hide it." The last section can't be deleted.
+   - **Delete** an empty section: simple confirmation naming it. A section **with dishes** opens a full-screen dialog:
+     - **Title:** "Delete "Kottu" and its 20 dishes?"
+     - **Dish names:** the first 5, plus "…and 15 more".
+     - **Buttons:** a red **Delete section and 20 dishes**, **Hide section instead** (switches it OFF), and **Cancel**.
+
+     After deleting, a message "Kottu" and 20 dishes deleted with a big **Undo** button stays for 10 seconds (see 4.3). The last section can't be deleted.
    - The dish form's section dropdown lists every section, hidden ones as "Name (hidden)".
    - The phone's Back button closes one layer at a time (name form → sections list → main screen).
 7. **"The menu needs a one-time update"** is shown instead of the manager if the saved menu is still in the old format (see 4.9).

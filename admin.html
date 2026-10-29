@@ -19,7 +19,10 @@
 <body>
   <!-- All visible text is filled in from js/admin-strings.js (data-i18n="key"). -->
 
-  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false">
+    <!-- One message with buttons (Undo / Continue), above the normal messages. -->
+    <div id="action-toast" class="toast action-toast" hidden></div>
+  </div>
   <p id="offline-banner" class="offline-banner" role="status" data-i18n="offlineBanner" hidden></p>
 
   <!-- Screen: loading -->
@@ -157,6 +160,19 @@
         <button id="section-cancel" class="btn" type="button" data-i18n="cancel"></button>
       </div>
     </form>
+  </section>
+
+  <!-- Confirmation: delete a section that has dishes -->
+  <section id="screen-delete-section" class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="delete-section-title" aria-describedby="delete-section-text" hidden>
+    <div class="sheet__form">
+      <h2 id="delete-section-title" class="sheet__title"></h2>
+      <p id="delete-section-text" class="sheet__intro" data-i18n="deleteWithDishesText"></p>
+      <ul id="delete-section-dishes" class="delete-list"></ul>
+      <p id="delete-section-more" class="form__hint" hidden></p>
+      <button id="delete-section-confirm" class="btn btn--danger" type="button"></button>
+      <button id="delete-section-hide" class="btn" type="button" data-i18n="hideInstead"></button>
+      <button id="delete-section-cancel" class="btn" type="button" data-i18n="cancel"></button>
+    </div>
   </section>
 
   <!-- Full-screen form: restaurant details -->

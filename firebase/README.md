@@ -131,7 +131,7 @@ Use the **restaurant's own Google account**, not your personal one, so the resta
   The admin page saves one change at a time, and the setup page adds sections 10 at a time and dishes 3 at a time, so the owner never hits these limits. Tested with 25 sections and 150 dishes.
 - The menu document can't be deleted. Everything not mentioned is denied.
 
-**Menu sections** are managed by the owner in the admin page (More → Menu sections): add, rename, reorder, show/hide, and delete empty ones. No rule changes are needed for new sections.
+**Menu sections** are managed by the owner in the admin page (More → Menu sections): add, rename, reorder, show/hide, and delete (a section with dishes is deleted together with its dishes, in one save, with a 10-second Undo). No rule changes are needed for new sections.
 
 ## G. Load the starting menu
 

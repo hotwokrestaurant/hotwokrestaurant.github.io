@@ -10,9 +10,11 @@
 import { t, LANGUAGE_CODE } from './admin-strings.js';
 import {
   watchLogin, logIn, logOut, sendResetEmail, isAdmin, watchMenu,
-  saveItems, saveSettings, saveSections, GoneError, BlockedError
+  saveItems, saveSettings, saveSections, saveSectionsAndItems, GoneError, BlockedError
 } from './admin-firebase.js';
-import { formatPrice, toBool, normalizeText, createElement, clearElement, sectionList } from './utils.js';
+import {
+  formatPrice, toBool, normalizeText, createElement, clearElement, sectionList, storageGet, storageSet
+} from './utils.js';
 
 // Same limits as firebase/firestore.rules (the rules are the real check).
 const LIMITS = {
@@ -29,6 +31,10 @@ const LIMITS = {
 };
 const TOAST_MS = 4000;
 const MAX_TOASTS = 2;
+const UNDO_MS = 10000;
+const DISHES_PER_SAVE = 3;          // the rules accept at most 3 new/changed dishes per save
+const DIALOG_DISH_NAMES = 5;        // the delete dialog lists up to 5 dish names
+const PENDING_UNDO_KEY = 'hotwok.admin.pendingUndo';
 
 const state = {
   menu: null,            // { settings, categories, items } — always the latest
@@ -40,6 +46,10 @@ const state = {
   busySections: new Set(), // section ids being saved
   editingId: null,       // dish being edited, or null when adding
   editingSectionId: null, // section being renamed, or null when adding
+  deletingSectionId: null, // section shown in the "delete with dishes" dialog
+  deletingDishIds: [],   // the dishes the owner saw listed in that dialog
+  restoring: false,      // an Undo is being saved (one at a time)
+  checkedPendingUndo: false,
   sheets: []             // open full-screen layers, top one last: { id, returnFocusTo }
 };
 
@@ -74,11 +84,48 @@ function showProblem(title, text, { retry = false } = {}) {
 
 function showToast(message, kind = 'ok') {
   const region = $('toasts');
-  // Keep at most 2 messages on screen, so they never cover the page.
-  while (region.children.length >= MAX_TOASTS) region.firstElementChild.remove();
+  // Keep at most 2 short messages on screen, so they never cover the page.
+  // (The message with buttons, #action-toast, is never removed here.)
+  const shortMessages = () => region.querySelectorAll('.toast:not(.action-toast)');
+  while (shortMessages().length >= MAX_TOASTS) shortMessages()[0].remove();
   const toast = createElement('p', `toast toast--${kind}`, message);
   region.append(toast);
   setTimeout(() => toast.remove(), TOAST_MS);
+}
+
+// One message with big buttons (Undo, Continue…), shown above the short
+// messages. A new one replaces the old one. `ms` = how long it stays
+// (null = until replaced or a button is pressed).
+let actionToastTimer = null;
+
+// Removes the short messages (they're about the previous action).
+function clearShortToasts() {
+  $('toasts').querySelectorAll('.toast:not(.action-toast)').forEach((toast) => toast.remove());
+}
+
+function showActionToast(message, buttons = [], ms = null) {
+  clearShortToasts(); // the message with buttons gets the space to itself
+  const box = $('action-toast');
+  clearTimeout(actionToastTimer);
+  clearElement(box);
+  box.append(createElement('p', 'action-toast__text', message));
+  if (buttons.length) {
+    const row = createElement('div', 'action-toast__buttons');
+    buttons.forEach(({ label, onClick }) => {
+      const button = createElement('button', 'btn btn--small', label);
+      button.type = 'button';
+      button.addEventListener('click', () => { hideActionToast(); onClick(); });
+      row.append(button);
+    });
+    box.append(row);
+  }
+  box.hidden = false;
+  if (ms) actionToastTimer = setTimeout(hideActionToast, ms);
+}
+
+function hideActionToast() {
+  clearTimeout(actionToastTimer);
+  $('action-toast').hidden = true;
 }
 
 function updateOfflineBanner() {
@@ -241,6 +288,7 @@ async function openManagerFor(user) {
     renderDishList();
     if (isSheetOpen('screen-sections')) renderSectionList();
     showScreen('screen-manager'); // the forms are separate layers, so they stay open
+    offerToFinishUndo();
   }, () => {
     showProblem(t('checkFailedTitle'), t('checkFailedText'), { retry: true });
   });
@@ -471,6 +519,7 @@ function isSheetOpen(id) {
 }
 
 function openSheet(id, focusTarget, returnFocusTo) {
+  clearShortToasts(); // so old messages never cover a form's title
   state.sheets.push({ id, returnFocusTo: returnFocusTo || null });
   $(id).hidden = false;
   document.body.classList.add('has-sheet');
@@ -723,29 +772,172 @@ function moveSection(id, direction) {
   }, t('orderSaved'));
 }
 
-function blockedDeleteReason(sectionMap, items, id) {
-  const count = items.filter((item) => item.category_id === id).length;
-  if (count === 1) return new BlockedError('sectionHasDishesOne');
-  if (count > 1) return new BlockedError('sectionHasDishesMany', { count });
-  if (Object.keys(sectionMap).length <= 1) return new BlockedError('lastSection');
-  return null;
-}
+// ----- Delete a section (and its dishes), with Undo -----
+//
+// Deleting is ONE save: the section and all its dishes are removed together
+// in a single transaction (all or nothing), so a dish can never be left
+// pointing to a section that's gone. The rules allow it because removing
+// dishes needs no checks; only new or changed dishes do.
+//
+// Undo has to ADD dishes back, which the rules check fully, 3 per save:
+//   1. bring the section back HIDDEN (customers never see it half-restored),
+//   2. add its dishes back, 3 per save (only those still missing),
+//   3. switch the section back to how it was (shown or hidden).
+// Each step is safe to repeat, and what's needed to finish is kept on the
+// phone, so an Undo cut off by a lost connection can always be finished.
+
+const sameIds = (a, b) => a.length === b.length && a.every((id) => b.includes(id));
 
 function deleteSection(id) {
   const section = findSection(state.menu.categories, id);
-  // Check first with what's on screen, to explain without asking "Are you sure?".
-  const reason = blockedDeleteReason(state.menu.categories, state.menu.items, id);
-  if (reason) { window.alert(saveErrorMessage(reason)); return; }
-  if (!window.confirm(t('confirmDeleteSection', { name: section.name }))) return;
+  if (Object.keys(state.menu.categories).length <= 1) { window.alert(t('lastSection')); return; }
+  const dishes = dishesIn(id);
+  if (dishes.length === 0) {
+    if (!window.confirm(t('confirmDeleteSection', { name: section.name }))) return;
+    deleteSectionNow(id, []);
+  } else {
+    openDeleteDialog(id, section, dishes);
+  }
+}
 
-  runSectionSave(id, (sectionMap, items) => {
-    findSection(sectionMap, id);
-    // Check again on the LATEST menu: another phone may have added a dish.
-    const latestReason = blockedDeleteReason(sectionMap, items, id);
-    if (latestReason) throw latestReason;
-    delete sectionMap[id];
-    return sectionMap;
-  }, t('sectionDeleted', { name: section.name }));
+function openDeleteDialog(id, section, dishes, returnFocusTo) {
+  const count = dishes.length;
+  state.deletingSectionId = id;
+  state.deletingDishIds = dishes.map((dish) => dish.id);
+  $('delete-section-title').textContent = t(count === 1 ? 'deleteWithDishesTitleOne' : 'deleteWithDishesTitleMany', { name: section.name, count });
+  const list = $('delete-section-dishes');
+  clearElement(list);
+  dishes.slice(0, DIALOG_DISH_NAMES).forEach((dish) => list.append(createElement('li', '', dish.name)));
+  const more = count - DIALOG_DISH_NAMES;
+  $('delete-section-more').textContent = more > 0 ? t('andMore', { count: more }) : '';
+  $('delete-section-more').hidden = more <= 0;
+  $('delete-section-confirm').textContent = t(count === 1 ? 'deleteWithDishesButtonOne' : 'deleteWithDishesButtonMany', { count });
+  openSheet('screen-delete-section', $('delete-section-cancel'), returnFocusTo || document.activeElement);
+}
+
+async function deleteSectionNow(id, confirmedDishIds) {
+  if (!navigator.onLine) { showToast(t('saveOffline'), 'error'); return false; }
+  let deleted = null; // exactly what was removed (for Undo)
+  state.busySections.add(id);
+  renderSectionList();
+  try {
+    await saveSectionsAndItems((sectionMap, items) => {
+      const section = findSection(sectionMap, id);
+      if (Object.keys(sectionMap).length <= 1) throw new BlockedError('lastSection');
+      const dishes = items.filter((item) => item.category_id === id);
+      // Only delete the dishes the owner saw listed. If another phone just
+      // added or removed one, stop and let the owner look again.
+      if (!sameIds(dishes.map((dish) => dish.id), confirmedDishIds)) throw new BlockedError('sectionChangedElsewhere');
+      deleted = { section: { id, ...section }, dishes: JSON.parse(JSON.stringify(dishes)) };
+      delete sectionMap[id];
+      return { categories: sectionMap, items: items.filter((item) => item.category_id !== id) };
+    });
+    offerUndo(deleted);
+    return true;
+  } catch (error) {
+    if (error instanceof BlockedError) window.alert(saveErrorMessage(error));
+    else showToast(saveErrorMessage(error), 'error');
+    return false;
+  } finally {
+    state.busySections.delete(id);
+    renderSectionList();
+  }
+}
+
+function offerUndo(deleted) {
+  const total = deleted.dishes.length;
+  const name = deleted.section.name;
+  let message = t('sectionDeleted', { name });
+  if (total === 1) message = t('deletedWithDishesOne', { name });
+  if (total > 1) message = t('deletedWithDishesMany', { name, count: total });
+  showActionToast(message, [{ label: t('undo'), onClick: () => restoreDeleted(deleted) }], UNDO_MS);
+}
+
+// What's needed to finish an Undo is kept on the phone until it's done.
+function savePendingUndo(deleted) { storageSet(PENDING_UNDO_KEY, deleted); }
+function clearPendingUndo() { storageSet(PENDING_UNDO_KEY, null); }
+
+function restoredCount(deleted, items) {
+  const present = new Set(items.map((item) => item.id));
+  return deleted.dishes.filter((dish) => present.has(dish.id)).length;
+}
+
+async function restoreDeleted(deleted) {
+  if (state.restoring) return;
+  state.restoring = true;
+  savePendingUndo(deleted);
+  const { section } = deleted;
+  const total = deleted.dishes.length;
+  let done = restoredCount(deleted, state.menu ? state.menu.items : []);
+  showActionToast(total ? t('restoringProgress', { name: section.name, done, total }) : t('restoringSection', { name: section.name }));
+  try {
+    if (!navigator.onLine) throw new Error('offline');
+
+    // 1. The section comes back first, HIDDEN, with its original id, name and order.
+    await saveSections((sectionMap) => {
+      if (!sectionMap[section.id]) {
+        if (Object.keys(sectionMap).length >= LIMITS.sections) throw new BlockedError('tooManySections', { max: LIMITS.sections });
+        sectionMap[section.id] = { name: section.name, sort_order: section.sort_order, visible: false };
+      }
+      return sectionMap;
+    });
+
+    // 2. Its dishes, 3 per save, exactly as they were (ids, details, order).
+    while (done < total) {
+      let doneAfterSave = done;
+      await saveItems((items, sectionMap) => {
+        if (!sectionMap[section.id]) throw new GoneError('section');
+        const present = new Set(items.map((item) => item.id));
+        const missing = deleted.dishes.filter((dish) => !present.has(dish.id));
+        doneAfterSave = total - missing.length + Math.min(DISHES_PER_SAVE, missing.length);
+        return items.concat(missing.slice(0, DISHES_PER_SAVE));
+      });
+      done = doneAfterSave; // counted only once the save has really succeeded
+      showActionToast(t('restoringProgress', { name: section.name, done, total }));
+    }
+
+    // 3. Shown again, if it was shown before.
+    if (section.visible) {
+      await saveSections((sectionMap) => {
+        if (!sectionMap[section.id]) throw new GoneError('section');
+        sectionMap[section.id].visible = true;
+        return sectionMap;
+      });
+    }
+
+    clearPendingUndo();
+    hideActionToast();
+    let backMessage = t('restoredSection', { name: section.name });
+    if (total === 1) backMessage = t('restoredWithDishOne', { name: section.name });
+    if (total > 1) backMessage = t('restoredWithDishes', { name: section.name, total });
+    showToast(backMessage);
+  } catch (error) {
+    // Paused: everything saved so far is safe (the section came back first).
+    // The rest is kept on this phone; Continue picks up where it stopped.
+    const message = error instanceof BlockedError
+      ? saveErrorMessage(error)
+      : t('undoPaused', { name: section.name, done, total });
+    showActionToast(message, [{ label: t('continueButton'), onClick: () => restoreDeleted(deleted) }]);
+  } finally {
+    state.restoring = false;
+  }
+}
+
+// After logging in: an Undo that didn't finish last time? Offer to finish it.
+function offerToFinishUndo() {
+  if (state.checkedPendingUndo) return;
+  state.checkedPendingUndo = true;
+  const pending = storageGet(PENDING_UNDO_KEY);
+  if (!pending || !pending.section || !Array.isArray(pending.dishes)) return;
+  const done = restoredCount(pending, state.menu.items);
+  const sectionBack = Boolean(state.menu.categories[pending.section.id]);
+  const finished = sectionBack && done === pending.dishes.length
+    && (!pending.section.visible || toBool(state.menu.categories[pending.section.id].visible));
+  if (finished) { clearPendingUndo(); return; }
+  showActionToast(t('undoUnfinished', { name: pending.section.name, done, total: pending.dishes.length }), [
+    { label: t('continueButton'), onClick: () => restoreDeleted(pending) },
+    { label: t('notNow'), onClick: () => {} }
+  ]);
 }
 
 // ----- Add / rename form -----
@@ -817,6 +1009,22 @@ function setupSections() {
   $('add-section').addEventListener('click', (event) => openSectionForm(null, event.currentTarget));
   $('section-form').addEventListener('submit', saveSectionForm);
   $('section-cancel').addEventListener('click', closeTopSheet);
+
+  // "Delete section and N dishes" dialog.
+  $('delete-section-cancel').addEventListener('click', closeTopSheet);
+  $('delete-section-hide').addEventListener('click', () => {
+    const id = state.deletingSectionId;
+    closeTopSheet();
+    const section = state.menu.categories[id];
+    if (section && toBool(section.visible)) toggleSection(id);
+  });
+  $('delete-section-confirm').addEventListener('click', async () => {
+    const button = $('delete-section-confirm');
+    setBusy(button, true);
+    const ok = await deleteSectionNow(state.deletingSectionId, state.deletingDishIds);
+    setBusy(button, false);
+    if (ok) closeTopSheet();
+  });
 
   $('section-list').addEventListener('click', (event) => {
     const button = event.target.closest('button[data-action]');

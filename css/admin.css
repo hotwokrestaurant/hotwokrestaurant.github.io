@@ -249,6 +249,42 @@ select.form__input {
   color: #ffffff;
 }
 
+/* Message with big buttons (Undo / Continue). Unlike the short messages,
+   it can be tapped. */
+.action-toast {
+  pointer-events: auto;
+}
+
+.action-toast__buttons {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.action-toast .btn {
+  min-width: 112px;
+  margin: var(--space-3) var(--space-2) 0 0;
+  border-color: var(--color-bg);
+  background: transparent;
+  color: var(--color-bg);
+}
+
+/* The first button (Undo / Continue) stands out: solid black. */
+.action-toast__buttons .btn:first-child {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Dish names listed in the "delete section and its dishes" dialog. */
+.delete-list {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  font-weight: 600;
+}
+
+.delete-list li {
+  margin-top: var(--space-1);
+}
+
 .offline-banner {
   position: sticky;
   top: 0;
