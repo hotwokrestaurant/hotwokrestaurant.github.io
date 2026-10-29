@@ -48,7 +48,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 7. **Graceful failure.** If Firestore can't be reached, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
 8. **Prices** are stored as whole-rupee integers (LKR) and displayed as `Rs. 1,250`.
 9. **Wrap all `localStorage` access in try/catch** — it can be unavailable.
-10. Do not change the menu data shape (`menu/published`: `settings`, `categories`, `items`, `updatedAt`; same shape as `js/sample-data.js`) or the security rules without updating `docs/PROJECT_SPEC.md` and telling the developer.
+10. Do not change the menu data shape (`menu/published`: `settings`, `categories`, `items`, `updatedAt`; same shape as `firebase/menu-seed.json`) or the security rules without updating `docs/PROJECT_SPEC.md` and telling the developer.
 11. **Brand look (customer menu):** dark theme only, black/white plus the logo red as the single accent colour. See "Visual style" in `docs/PROJECT_SPEC.md`.
 12. **No `Co-Authored-By` lines** (or any other AI attribution) in suggested commit messages.
 13. **No photo uploads.** The admin page never handles images. Dish photos, if ever added, are put in `images/` by the developer; the `image` field stays optional.
@@ -73,7 +73,6 @@ hotwokrestaurant.github.io/  ← repo root (the local folder may still be called
 ├── js/menu.js               ← customer menu rendering
 ├── js/admin.js              ← admin logic (Firestore + Auth)
 ├── js/utils.js              ← formatPrice, escaping helpers, storage helpers
-├── js/sample-data.js        ← offline sample menu (same shape as menu/published)
 ├── images/                  ← dish photos (.webp), icons, logo
 ├── firebase/firestore.rules ← security rules (pasted into the console)
 ├── firebase/menu-seed.json  ← starting menu data

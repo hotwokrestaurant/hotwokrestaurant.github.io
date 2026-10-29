@@ -22,6 +22,17 @@ export const FIREBASE_CONFIG = {
 export const MENU_COLLECTION = 'menu';
 export const MENU_DOC_ID = 'published';
 
+// Phone number shown on the "menu couldn't load" message, for when there is
+// no saved menu to take the number from (first visit + no connection).
+// TODO: replace with the restaurant's real number (same as settings.phone).
+export const FALLBACK_PHONE = '+94 XX XXX XXXX';
+
+// How long to wait for Firestore before giving up (milliseconds).
+// First visit (nothing saved yet): wait longer, slow 3G can need ~10 s.
+// With a saved menu already on screen: give up sooner and keep showing it.
+export const FIRST_LOAD_TIMEOUT_MS = 20000;
+export const REFRESH_TIMEOUT_MS = 10000;
+
 // True until the placeholders above are replaced with the real config.
 export const FIREBASE_NOT_CONFIGURED = FIREBASE_CONFIG.apiKey.startsWith('PASTE_');
 

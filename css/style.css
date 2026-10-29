@@ -460,6 +460,42 @@ a {
   color: var(--color-text-muted);
 }
 
+/* ---------- Loading states ---------- */
+
+/* "Showing saved menu · updated 29 Oct": one quiet grey line under the tabs. */
+.status-note {
+  margin-top: var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* First visit with no connection: friendly message + Try again + Call us. */
+.load-error {
+  max-width: 320px;
+  margin: 0 auto;
+  padding: var(--space-7) 0;
+  text-align: center;
+}
+
+.load-error__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.load-error__text {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.load-error__actions {
+  margin-top: var(--space-5);
+}
+
+.load-error__actions .button + .button {
+  margin-top: var(--space-3);        /* margins, not "gap", for older phones */
+}
+
 /* ---------- Dish row (printed-menu style, not cards) ---------- */
 /* A row is [photo] [text]. The text needs at least 11em of width beside the
    photo; normally there's plenty, but with very large text or page zoom it
@@ -751,16 +787,25 @@ a {
   padding: 0 var(--space-5);
   border: 1px solid var(--color-text);
   border-radius: var(--radius);
+  background: transparent;           /* <button>s are grey by default */
   color: var(--color-text);
+  font-family: inherit;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-decoration: none;
+  cursor: pointer;
 }
 
 /* Red while pressed (white on the logo red is 4.6:1). */
 .button:active {
   background: var(--color-red);
   border-color: var(--color-red);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .text-link {

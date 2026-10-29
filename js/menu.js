@@ -1,7 +1,9 @@
 // Customer menu: turns menu data into the page.
-// For now it uses local sample data. In Phase 3 it will come from Firestore (menu/published).
+// The data comes from Firestore (menu/published) via js/api.js, with a saved
+// copy on the phone so repeat visits appear instantly and work offline.
 
-import { SAMPLE_MENU } from './sample-data.js';
+import { getSavedMenu, saveMenu, fetchLatestMenu } from './api.js';
+import { FALLBACK_PHONE, FIRST_LOAD_TIMEOUT_MS, REFRESH_TIMEOUT_MS } from './config.js';
 import { formatAmount, toBool, toPositiveNumber, normalizeText, createElement, clearElement } from './utils.js';
 
 // Only simple image file names are allowed, e.g. "chicken-kottu.webp".
@@ -280,17 +282,20 @@ function renderFooter(settings) {
 
   const callButton = document.getElementById('call-button');
   if (settings.phone) {
-    // "tel:" links open the phone dialler. Keep only digits and a leading +.
-    callButton.href = `tel:${String(settings.phone).replace(/[^\d+]/g, '')}`;
+    callButton.href = phoneLink(settings.phone);
     document.getElementById('call-label').textContent = `Call us · ${settings.phone}`;
-    callButton.hidden = false;
   }
+  callButton.hidden = !settings.phone;
 
   const mapLink = document.getElementById('map-link');
-  if (settings.map_url && String(settings.map_url).startsWith('https://')) {
-    mapLink.href = settings.map_url;
-    mapLink.hidden = false;
-  }
+  const hasMap = Boolean(settings.map_url) && String(settings.map_url).startsWith('https://');
+  if (hasMap) mapLink.href = settings.map_url;
+  mapLink.hidden = !hasMap;
+}
+
+// "tel:" links open the phone dialler. Keep only digits and a leading +.
+function phoneLink(phone) {
+  return `tel:${String(phone).replace(/[^\d+]/g, '')}`;
 }
 
 // ---------- Interactions ----------
@@ -310,8 +315,14 @@ function setupTabClicks() {
 // Highlight the tab of the category currently on screen.
 // IntersectionObserver tells us when sections enter/leave a band near the top
 // of the screen — much cheaper than checking positions on every scroll.
+// The menu can be drawn twice (saved copy, then a newer version), so each
+// observer is kept here and switched off before a new one is made.
+let activeTabObserver = null;
+let revealObserver = null;
+
 function setupActiveTabTracking() {
   if (!('IntersectionObserver' in window)) return;
+  if (activeTabObserver) activeTabObserver.disconnect();
 
   const sections = Array.from(document.querySelectorAll('.menu-section'));
   const onScreen = new Set();
@@ -330,6 +341,7 @@ function setupActiveTabTracking() {
   });
 
   sections.forEach((section) => observer.observe(section));
+  activeTabObserver = observer;
 }
 
 function setActiveTab(sectionId) {
@@ -349,8 +361,10 @@ function setActiveTab(sectionId) {
 // Gently fade each category in the first time it scrolls onto the screen.
 // Skipped entirely when the phone's "reduce motion" setting is on, or when
 // the browser lacks IntersectionObserver — then everything is simply visible.
-function setupSectionReveal() {
-  if (scrollBehavior === 'auto' || !('IntersectionObserver' in window)) return;
+// Also skipped when the menu is redrawn with a newer version (no second fade).
+function setupSectionReveal(animate) {
+  if (revealObserver) revealObserver.disconnect();
+  if (!animate || scrollBehavior === 'auto' || !('IntersectionObserver' in window)) return;
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -364,6 +378,7 @@ function setupSectionReveal() {
     section.classList.add('reveal');
     observer.observe(section);
   });
+  revealObserver = observer;
 }
 
 // Slide the tab strip sideways so the active tab is centred.
@@ -376,12 +391,11 @@ function scrollTabIntoView(tab) {
 
 // Fade the right edge of the tab strip only while more tabs are hidden to
 // the right — a hint that it scrolls. Re-checked when the strip scrolls,
-// the screen size changes, or search hides some tabs.
+// the screen size changes, the menu is drawn, or search hides some tabs.
 function setupTabStripFade() {
   const strip = document.getElementById('category-tabs');
   strip.addEventListener('scroll', updateTabStripFade, { passive: true });
   window.addEventListener('resize', updateTabStripFade, { passive: true });
-  updateTabStripFade();
 }
 
 function updateTabStripFade() {
@@ -441,7 +455,9 @@ function setupBackToTop() {
 
 // ---------- Start ----------
 
-function renderMenu(data) {
+// Draws the whole menu. Can run twice: first from the saved copy, then again
+// if Firestore has a newer version. `isFirstDraw` decides the fade-in.
+function renderMenu(data, isFirstDraw) {
   const { settings, groups } = prepareMenu(data);
   renderHeader(settings);
   renderCategoryTabs(groups);
@@ -449,8 +465,107 @@ function renderMenu(data) {
   renderFooter(settings);
   document.getElementById('menu').setAttribute('aria-busy', 'false');
   setupActiveTabTracking();
-  setupSectionReveal();
-  setupTabStripFade();
+  setupSectionReveal(isFirstDraw);
+  updateTabStripFade();
+
+  // If the customer had already typed in the search box, keep that filter.
+  const query = document.getElementById('search-input').value;
+  if (query) applySearch(query);
+}
+
+// ---------- Loading states ----------
+
+// Small note under the tabs, e.g. "Showing saved menu · updated 29 Oct".
+function showSavedMenuNote(updatedAt) {
+  const note = document.getElementById('status-note');
+  const date = new Date(updatedAt);
+  const when = updatedAt > 0
+    ? ` · updated ${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+    : '';
+  note.textContent = `Showing saved menu${when}`;
+  note.hidden = false;
+}
+
+function hideSavedMenuNote() {
+  document.getElementById('status-note').hidden = true;
+}
+
+// No saved menu AND Firestore couldn't be reached: friendly message,
+// a "Try again" button, and a call button (number from js/config.js).
+function showLoadError() {
+  const container = document.getElementById('menu-sections');
+  clearElement(container);
+
+  const box = createElement('div', 'load-error');
+  box.setAttribute('role', 'alert');
+  box.append(
+    createElement('p', 'load-error__title', 'Sorry, the menu couldn\'t load.'),
+    createElement('p', 'load-error__text', 'Please check your internet connection and try again, or call us and we\'ll help.')
+  );
+
+  const retry = createElement('button', 'button', 'Try again');
+  retry.type = 'button';
+  retry.addEventListener('click', () => {
+    retry.disabled = true;
+    retry.textContent = 'Loading…';
+    loadMenu();
+  });
+
+  const call = createElement('a', 'button', `Call us · ${FALLBACK_PHONE}`);
+  call.href = phoneLink(FALLBACK_PHONE);
+
+  const actions = createElement('div', 'load-error__actions');
+  actions.append(retry, call);
+  box.append(actions);
+  container.append(box);
+  document.getElementById('menu').setAttribute('aria-busy', 'false');
+}
+
+// ---------- Start ----------
+
+// What is currently on screen: { menu, updatedAt } or null.
+let shownMenu = null;
+// True while a fetch is running, so "back online" can't start a second one.
+let isLoading = false;
+
+// Has the menu changed? Normally updatedAt tells us (the admin page always
+// sets it). Edits made by hand in the Firebase console don't change
+// updatedAt, so the contents are compared too (~5 KB, takes no time).
+function isDifferentMenu(a, b) {
+  return a.updatedAt !== b.updatedAt || JSON.stringify(a.menu) !== JSON.stringify(b.menu);
+}
+
+// Cache-first loading:
+//   1. A saved copy on this phone? Draw it at once (no waiting for the network).
+//   2. Fetch the latest from Firestore (1 read). If it's newer, redraw and save.
+//   3. Fetch failed or too slow? Keep the saved copy with a small note,
+//      or, with nothing saved, show a friendly error.
+async function loadMenu() {
+  if (isLoading) return;
+  isLoading = true;
+
+  if (!shownMenu) {
+    const saved = getSavedMenu();
+    if (saved) {
+      shownMenu = saved;
+      renderMenu(saved.menu, true);
+    }
+  }
+
+  try {
+    const latest = await fetchLatestMenu(shownMenu ? REFRESH_TIMEOUT_MS : FIRST_LOAD_TIMEOUT_MS);
+    if (!shownMenu || isDifferentMenu(latest, shownMenu)) {
+      renderMenu(latest.menu, !shownMenu);
+      shownMenu = latest;
+      saveMenu(latest);
+    }
+    hideSavedMenuNote();
+  } catch (error) {
+    if (shownMenu) showSavedMenuNote(shownMenu.updatedAt);
+    else showLoadError();
+  } finally {
+    isLoading = false;
+  }
 }
 
 function init() {
@@ -464,7 +579,14 @@ function init() {
   setupTabClicks();
   setupSearch();
   setupBackToTop();
-  renderMenu(SAMPLE_MENU);
+  setupTabStripFade();
+
+  // When the phone comes back online after a failed load, try again quietly.
+  window.addEventListener('online', () => {
+    if (!document.getElementById('status-note').hidden || !shownMenu) loadMenu();
+  });
+
+  loadMenu();
 }
 
 init();

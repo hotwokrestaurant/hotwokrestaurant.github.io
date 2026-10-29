@@ -43,7 +43,7 @@ Owner phone ──home icon──► admin.html  (GitHub Pages)
 
 ### 3.1 The menu document: `menu/published`
 
-The **whole published menu is one document**, so each customer visit costs a single read. Its shape is the same as `js/sample-data.js`, plus `updatedAt`, so the rendering code works unchanged.
+The **whole published menu is one document**, so each customer visit costs a single read. Its shape is the same as `firebase/menu-seed.json`, plus `updatedAt`, so the rendering code works unchanged.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -102,7 +102,7 @@ One document per owner account; the document ID is the account's Firebase Auth *
 
 ### 3.6 Starting data (placeholder prices — replace with the real menu)
 
-Stored in `firebase/menu-seed.json` (generated from `js/sample-data.js`) and loaded with `firebase/setup.html`.
+Stored in `firebase/menu-seed.json` and loaded with `firebase/setup.html`.
 
 | category | name | price | price_large | spicy | veg |
 |---|---|---|---|---|---|
@@ -135,12 +135,28 @@ Stored in `firebase/menu-seed.json` (generated from `js/sample-data.js`) and loa
 - **Admin page:** `firebase-app.js` + `firebase-firestore.js` + `firebase-auth.js`.
 - Config (`FIREBASE_CONFIG`) and the document path (`MENU_COLLECTION` / `MENU_DOC_ID`) live in `js/config.js`. The web config is not a secret.
 
-### 4.2 Customer reads (Phase 3)
-1. On load, render the **cached** menu from `localStorage` immediately (if any), then fetch in the background.
-2. Fetch with one `getDoc(doc(db, 'menu', 'published'))` (= 1 read).
-3. On success: render, and save the data plus `updatedAt` to `localStorage` (wrapped in try/catch).
-4. On failure: keep showing the cached menu with a small "showing saved menu" note; with no cache, show a friendly error with the phone number.
-5. Filtering stays in the browser (as in Phase 1): only `visible` categories; only `available` items unless `show_sold_out`.
+### 4.2 Customer reads (Phase 3, `js/api.js` + `js/menu.js`)
+1. On load, render the **saved** menu from `localStorage` (key `hotwok.menu.v1`: `{ menu, updatedAt }`, `updatedAt` in milliseconds) immediately, if one exists. Otherwise the skeleton stays.
+2. The Firebase SDK (app + Firestore Lite) is loaded with a **dynamic `import()`** only when fetching, so it never delays the saved menu or the skeleton. `index.html` preconnects to gstatic and Firestore, and `modulepreload`s the page's own helper modules.
+3. Fetch with one `getDoc(doc(db, 'menu', 'published'))` (= 1 read per visit), with a **timeout**: 20 s on a first visit, 10 s when a saved menu is already shown (`js/config.js`).
+4. On success: redraw **only if the menu changed** (`updatedAt` differs, or the contents differ, which catches hand edits in the Firebase console that don't touch `updatedAt`), and save to `localStorage` (try/catch). A redraw keeps any search text and skips the fade-in.
+5. On failure (offline, timeout, missing/invalid data): with a saved menu, show the small note "Showing saved menu · updated 29 Oct"; with none, show a friendly message with **Try again** and **Call us** (number from `FALLBACK_PHONE` in `js/config.js`). When the phone comes back online, the menu quietly retries.
+6. Filtering stays in the browser: only `visible` categories; only `available` items unless `show_sold_out`.
+7. **No sample data in the live site.** All text, including the "Sample menu – prices are placeholders" notice, comes from `settings` in Firestore. `js/sample-data.js` was removed in Phase 3; `firebase/menu-seed.json` is the reference data.
+8. A fully offline **first** page load can't work without a service worker (not in v1). "Offline" here means the page itself loaded (from the network or the browser's cache) but Firestore couldn't be reached.
+
+Measured (headless Chrome against the live project, 412px wide):
+
+| Scenario | Menu visible |
+|---|---|
+| First visit, normal connection | 2.5 s (skeleton at 0.1 s) |
+| Repeat visit | 0.1 s (from the saved copy) |
+| Slow 3G, first visit | 12.0 s (skeleton at 2.2 s) |
+| Slow 3G, repeat visit, no browser cache | 5.5 s (saved copy; page files took the rest) |
+| Firestore unreachable, saved copy | 0.1 s + note |
+| Firestore unreachable, nothing saved | error message at 0.9 s |
+| Firestore not answering, saved copy | 0.1 s; note at 10 s |
+| Firestore not answering, nothing saved | error message at 21 s |
 
 ### 4.3 Owner writes (Phase 4): never overwrite the menu
 The admin page **never** writes the whole document with `setDoc`. Every change (toggle sold out, edit, add, delete, reorder, settings) is a **transaction that updates only the field it changes**:
@@ -156,7 +172,7 @@ await runTransaction(db, async (tx) => {
 
 - **Why a transaction:** if another phone saves between steps 1 and 3, Firestore notices that the document changed and **re-runs the function with the fresh menu**. Two phones editing different dishes at the same moment both keep their change; neither can wipe the other's.
 - **Why `tx.update` of one field:** a dish change writes only `items` (+ `updatedAt`); a settings change writes only `settings`; a category change writes only `categories`. Unrelated parts of the document are never rewritten.
-- **Why not `items.<id>` field paths:** that only works if `items` is a map. The data model keeps `items` as an array (same shape as `js/sample-data.js`), and the transaction gives the same protection.
+- **Why not `items.<id>` field paths:** that only works if `items` is a map. The data model keeps `items` as an array (same shape as `firebase/menu-seed.json`), and the transaction gives the same protection.
 - **Tested** against the current rules in the Firestore emulator: two simultaneous transactions on different dishes keep both edits; a settings-only transaction leaves dishes untouched; an invalid dish inside a transaction is still rejected. No rule changes are needed.
 - If the same dish is edited on two phones at once, the later save wins for that dish (expected).
 - Each save sets `updatedAt: serverTimestamp()`.
@@ -277,7 +293,7 @@ Work through these in order. Stop after each phase for review.
 
 | Phase | Deliverable | Done when… |
 |---|---|---|
-| **1. Static customer menu** | `index.html`, `css/style.css`, `js/menu.js`, `js/utils.js` using sample data from a local `js/sample-data.js` | Looks good at 360px; tabs, search and badges work |
+| **1. Static customer menu** | `index.html`, `css/style.css`, `js/menu.js`, `js/utils.js` using local sample data (`js/sample-data.js`, removed in Phase 3) | Looks good at 360px; tabs, search and badges work |
 | **2. Firebase backend** | `firebase/firestore.rules`, `firebase/menu-seed.json`, `firebase/setup.html` (+ `.js`, `.css`), `firebase/README.md`, `js/config.js` (config placeholders) | Project created on Spark; rules published; seed loaded; signed-out read works, signed-out write rejected, owner write works |
 | **3. Connect customer menu** | `js/api.js` (Firestore Lite `getDoc` of `menu/published`), `js/menu.js` wired to it; localStorage cache-first + background refresh; error states | Menu loads from Firestore with 1 read per visit; shows the cached menu instantly and when offline |
 | **4. Admin page** | `admin.html`, `css/admin.css`, `js/admin.js` (Firebase Auth email/password + Firestore transactions with field-level `tx.update`, see 4.3); "Download backup" button; "Load from a backup file" in `firebase/setup.html` (see 4.7) | Owner can log in (and stays logged in), toggle sold out, edit, add, delete and reorder on a phone; two phones editing different dishes at once keep both changes; invalid data is rejected by the rules; a downloaded backup restores correctly |

@@ -8,7 +8,7 @@ This guide sets up the free backend for the menu: **Cloud Firestore** (the datab
 
 | Thing | What it's for |
 |---|---|
-| Firestore document `menu/published` | The whole menu in **one** document: `settings`, `categories`, `items`, `updatedAt`. Same shape as `js/sample-data.js`. Each customer visit reads it once. |
+| Firestore document `menu/published` | The whole menu in **one** document: `settings`, `categories`, `items`, `updatedAt`. Same shape as `firebase/menu-seed.json`. Each customer visit reads it once. |
 | Firestore collection `admins` | The allow-list. One document per owner account, named after that account's **UID**. Only these accounts can change the menu. |
 | One Authentication user | The owner's email + password, created by you in the console. There's no sign-up page. |
 | `firebase/firestore.rules` | The security rules: anyone can read the menu; only allow-listed accounts can save it, and only valid data. |
@@ -133,7 +133,7 @@ Use the **restaurant's own Google account**, not your personal one, so the resta
 
 ## G. Load the starting menu
 
-The starting menu is in **`firebase/menu-seed.json`**. It's the same data as `js/sample-data.js`, with placeholder prices. A small setup page loads it for you. **The setup page only works from your own computer, through a local web server**, because browsers block ES modules from pages opened as plain files (`file://`).
+The starting menu is in **`firebase/menu-seed.json`**. It has placeholder prices. A small setup page loads it for you. **The setup page only works from your own computer, through a local web server**, because browsers block ES modules from pages opened as plain files (`file://`).
 
 1. Make sure `js/config.js` has your real config (step B) and is saved.
 2. In VS Code, open a terminal (**Terminal → New Terminal**) in the project folder and run:

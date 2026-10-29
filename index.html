@@ -14,8 +14,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap">
 
+  <!-- Open connections early to the Firebase code (gstatic) and the database,
+       so the menu fetch starts faster. These don't download anything yet. -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+
   <link rel="stylesheet" href="css/style.css">
   <script type="module" src="js/menu.js"></script>
+  <!-- Fetch menu.js's helper files at the same time as menu.js, instead of one
+       after another (saves a round trip, ~2 s on slow 3G). -->
+  <link rel="modulepreload" href="js/api.js">
+  <link rel="modulepreload" href="js/config.js">
+  <link rel="modulepreload" href="js/utils.js">
 </head>
 <body>
   <!-- Icon set: drawn once here, reused anywhere with <use href="#icon-…">. -->
@@ -95,6 +105,9 @@
   </nav>
 
   <main id="menu" class="menu" aria-busy="true">
+    <!-- Shown only when the latest menu couldn't be loaded and a saved copy is displayed -->
+    <p id="status-note" class="status-note" role="status" hidden></p>
+
     <!-- Skeleton loader: faint placeholder rows shown until the menu is ready -->
     <div id="menu-sections">
       <div class="skeleton" aria-hidden="true">
