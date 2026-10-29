@@ -29,7 +29,7 @@ The developer (Janana) is a **beginner** building this for free as a real client
 | Layer | Technology |
 |---|---|
 | Frontend | Plain HTML, CSS, vanilla JavaScript (ES modules). **No frameworks, no build step, no npm runtime dependencies.** |
-| Font | **Montserrat** from Google Fonts (free) — weights 500, 600, 800 only, `display=swap`, system-font fallback. This is the ONLY web font allowed. |
+| Font | **Montserrat** from Google Fonts (free) — weights 500, 600, 800 only, `display=swap`, loaded **without blocking the page** (`media="print"` + `onload`), with size-matched local fallback fonts in `css/style.css` (spec section 5). This is the ONLY web font allowed. Never add a render-blocking font stylesheet. |
 | Database | **Cloud Firestore** (Firebase **Spark free plan**, region `asia-south1`). The whole published menu is ONE document, `menu/published`. |
 | Owner login | **Firebase Authentication**, email/password. Owner account created manually in the console; no sign-up flow. Allow-list: `admins/{uid}` documents. |
 | Backend logic | None — no server code. Security and validation live in `firebase/firestore.rules`. |

@@ -599,11 +599,11 @@ async function loadMenu() {
 }
 
 function init() {
-  // Re-check the tagline lines when the screen size changes, and once
-  // Montserrat has loaded (it is wider than the fallback font).
+  // Re-check the tagline lines when the screen size changes, and whenever a
+  // font finishes downloading (Montserrat arrives in the background).
   window.addEventListener('resize', fitTaglineFrame, { passive: true });
-  if (document.fonts) {
-    document.fonts.load('500 1em Montserrat').then(fitTaglineFrame, () => {});
+  if (document.fonts && document.fonts.addEventListener) {
+    document.fonts.addEventListener('loadingdone', fitTaglineFrame);
   }
 
   setupTabClicks();

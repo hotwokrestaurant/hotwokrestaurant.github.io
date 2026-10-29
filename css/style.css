@@ -22,7 +22,9 @@
   --color-control-border: #6b6b6b;   /* input border — 3.7:1, visible enough for a control */
   --color-skeleton: #1c1c1c;
 
-  --font-body: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  /* The two "Montserrat Fallback" fonts (below) fill in until Montserrat arrives. */
+  --font-body: 'Montserrat', 'Montserrat Fallback Roboto', 'Montserrat Fallback Arial',
+    system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -38,6 +40,75 @@
   --thumb-size: 72px;
   --content-width: 720px;
   --focus-ring: 2px solid var(--color-red);
+}
+
+/* ---------- Fallback fonts (shown until Montserrat has downloaded) ----------
+   Montserrat loads in the background, so the menu first shows a font already on
+   the phone: Roboto on Android, Arial on iPhone and computers. Montserrat is
+   7–18% wider, so without help the text would re-wrap and jump when it swaps.
+   size-adjust scales each local font to Montserrat's width (measured in Chrome
+   on the menu's own text, per weight), and the overrides copy Montserrat's
+   ascent 0.968 / descent 0.251 (each divided by size-adjust). Older browsers
+   ignore these lines and just show the plain local font, as before.
+   A phone without the font skips that face and uses the next one in --font-body. */
+@font-face {
+  font-family: 'Montserrat Fallback Roboto';
+  font-weight: 500;
+  src: local('Roboto Medium'), local('Roboto-Medium'), local('Roboto');
+  size-adjust: 113.3%;
+  ascent-override: 85.4%;
+  descent-override: 22.2%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Montserrat Fallback Roboto';
+  font-weight: 600;
+  src: local('Roboto Bold'), local('Roboto-Bold'), local('Roboto');
+  size-adjust: 114.3%;
+  ascent-override: 84.7%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Montserrat Fallback Roboto';
+  font-weight: 800;
+  src: local('Roboto Bold'), local('Roboto-Bold'), local('Roboto');
+  size-adjust: 118.5%;
+  ascent-override: 81.7%;
+  descent-override: 21.2%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Montserrat Fallback Arial';
+  font-weight: 500;
+  src: local('Arial'), local('ArialMT');
+  size-adjust: 112.9%;
+  ascent-override: 85.7%;
+  descent-override: 22.2%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Montserrat Fallback Arial';
+  font-weight: 600;
+  src: local('Arial Bold'), local('Arial-BoldMT');
+  size-adjust: 107.2%;
+  ascent-override: 90.3%;
+  descent-override: 23.4%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Montserrat Fallback Arial';
+  font-weight: 800;
+  src: local('Arial Bold'), local('Arial-BoldMT');
+  size-adjust: 111.2%;
+  ascent-override: 87%;
+  descent-override: 22.6%;
+  line-gap-override: 0%;
 }
 
 /* ---------- Base ---------- */

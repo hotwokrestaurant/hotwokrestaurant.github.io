@@ -8,11 +8,16 @@
   <meta name="theme-color" content="#0b0b0b">
   <meta name="color-scheme" content="dark">
 
-  <!-- Montserrat (weights 500, 600, 800). "preconnect" opens the connection early;
-       "display=swap" shows the system font straight away, then swaps when loaded. -->
+  <!-- Montserrat (weights 500, 600, 800), loaded WITHOUT blocking the page:
+       - "preconnect" opens the connections to Google Fonts early.
+       - media="print" lets the browser download the stylesheet in the background
+         without waiting for it; when it arrives, onload switches it on for screens.
+       - "display=swap" shows the matched fallback font (css/style.css) straight
+         away, then swaps to Montserrat when it has downloaded. -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;800&display=swap"></noscript>
 
   <!-- Open the connection to the database early, so the menu fetch starts faster.
        (This doesn't download anything yet.) -->
