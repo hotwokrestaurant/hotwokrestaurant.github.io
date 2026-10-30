@@ -5,7 +5,8 @@
 import { getSavedMenu, saveMenu, fetchLatestMenu } from './api.js';
 import { FALLBACK_PHONE, FIRST_LOAD_TIMEOUT_MS, REFRESH_TIMEOUT_MS } from './config.js';
 import {
-  formatAmount, toBool, toPositiveNumber, normalizeText, createElement, clearElement, sectionList, dishInSection
+  formatAmount, toBool, toPositiveNumber, normalizeText, createElement, clearElement, sectionList, dishInSection,
+  tagLabels
 } from './utils.js';
 
 // Only simple image file names are allowed, e.g. "chicken-kottu.webp".
@@ -77,6 +78,25 @@ function fitTaglineFrame() {
   }
 }
 
+// The icon key under the search box: the owner's tag names, and only the
+// tags that at least one dish on the menu uses (no key at all if none do).
+function renderLegend(groups, labels) {
+  const used = { spicy: false, veg: false, special: false };
+  groups.forEach((group) => group.items.forEach((item) => {
+    if (toBool(item.spicy)) used.spicy = true;
+    if (toBool(item.veg)) used.veg = true;
+    if (toBool(item.featured)) used.special = true;
+  }));
+
+  const legend = document.getElementById('legend');
+  legend.querySelectorAll('.legend__item').forEach((entry) => {
+    const tag = entry.getAttribute('data-tag');
+    entry.querySelector('.legend__label').textContent = labels[tag];
+    entry.hidden = !used[tag];
+  });
+  legend.hidden = !used.spicy && !used.veg && !used.special;
+}
+
 function renderCategoryTabs(groups) {
   const list = document.getElementById('category-tabs');
   clearElement(list);
@@ -91,7 +111,7 @@ function renderCategoryTabs(groups) {
   });
 }
 
-function renderSections(groups) {
+function renderSections(groups, labels) {
   const container = document.getElementById('menu-sections');
   clearElement(container);
 
@@ -116,7 +136,7 @@ function renderSections(groups) {
     section.setAttribute('aria-labelledby', heading.id);
     section.append(heading);
 
-    group.items.forEach((item) => section.append(createDishCard(item, sectionHasPhotos)));
+    group.items.forEach((item) => section.append(createDishCard(item, sectionHasPhotos, labels)));
     container.append(section);
   });
 }
@@ -128,14 +148,14 @@ function renderSections(groups) {
 // .dish__main instead, so it sits right under the name, beside the
 // Regular/Large block. In categories with photos, the CSS moves a
 // Regular/Large block under the name instead (see style.css).
-function createDishCard(item, sectionHasPhotos) {
+function createDishCard(item, sectionHasPhotos, labels) {
   const isAvailable = toBool(item.available);
   const card = createElement('article', isAvailable ? 'dish' : 'dish dish--sold-out');
   // Text used by the search box (name + description, lower-case).
   card.dataset.search = normalizeText(`${item.name} ${item.description || ''}`);
 
   const name = createElement('h3', 'dish__name', item.name);
-  const icons = createDishIcons(item);
+  const icons = createDishIcons(item, labels);
   if (icons) name.append(icons);
 
   const title = createElement('div', 'dish__title');
@@ -224,11 +244,12 @@ function createPriceParts(amount) {
 
 // Small SVG icons after the dish name. Each icon has a hidden text label
 // so screen readers say "Spicy" etc. (the icon key at the top explains them visually).
-function createDishIcons(item) {
+// `labels` are the owner's tag names (see tagLabels in utils.js).
+function createDishIcons(item, labels) {
   const iconInfo = [
-    { show: toBool(item.spicy), icon: 'flame', className: 'icon--spicy', label: 'Spicy' },
-    { show: toBool(item.veg), icon: 'leaf', className: 'icon--veg', label: 'Vegetarian' },
-    { show: toBool(item.featured), icon: 'star', className: 'icon--featured', label: "Chef's special" }
+    { show: toBool(item.spicy), icon: 'flame', className: 'icon--spicy', label: labels.spicy },
+    { show: toBool(item.veg), icon: 'leaf', className: 'icon--veg', label: labels.veg },
+    { show: toBool(item.featured), icon: 'star', className: 'icon--featured', label: labels.special }
   ].filter((info) => info.show);
 
   if (iconInfo.length === 0) return null;
@@ -489,9 +510,11 @@ function setupBackToTop() {
 // if Firestore has a newer version. `isFirstDraw` decides the fade-in.
 function renderMenu(data, isFirstDraw) {
   const { settings, groups } = prepareMenu(data);
+  const labels = tagLabels(settings);
   renderHeader(settings);
+  renderLegend(groups, labels);
   renderCategoryTabs(groups);
-  renderSections(groups);
+  renderSections(groups, labels);
   renderFooter(settings);
   document.getElementById('menu').setAttribute('aria-busy', 'false');
   setupActiveTabTracking();

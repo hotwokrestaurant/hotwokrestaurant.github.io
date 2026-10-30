@@ -195,7 +195,7 @@ Run these on the setup page (step G). Each one should say **PASS**:
    - Change the simulation type to **create** and add any document data.
    - Click **Run**. Expected: red, **denied**.
 
-**Already tested before you got this file:** the rules passed **110 checks** in the official Firestore emulator, plus a step-limit test of every kind of save with 25 sections and 150 dishes. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
+**Already tested before you got this file:** the rules passed **124 checks** in the official Firestore emulator, plus a step-limit test of every kind of save with 25 sections and 150 dishes. Each rejection was confirmed to come from a real rule, not from Firestore's 1,000-step limit. The checks covered:
 - **Reads:** signed-out reads (allowed); listing the collection and reading other documents (denied).
 - **Who can write:** signed-out visitors and signed-in non-owners (denied); creating the menu with dishes in the same save (denied).
 - **Loading the menu:** creating it without dishes, then loading the 18 dishes 3 at a time (allowed); a 4-dish save (denied).
@@ -216,6 +216,7 @@ Run these on the setup page (step G). Each one should say **PASS**:
 - **Sections:** add, rename, reorder, hide, delete an empty one, 30-character names (allowed).
 - **The one-time sections upgrade** (old format → section ids): each step allowed, mistakes refused, and the result equals `menu-seed.json`.
   - A non-server `updatedAt`, a `javascript:` map link, and deleting the menu.
+- **Tagline and dish tag names:** renamed tags, 1- and 20-character names (also in Sinhala), an empty or 60-character tagline, and menus without tag names (allowed); an empty or 21-character name, a missing, extra or wrong tag, a number, text instead of a map, a name on two lines, a 61-character tagline (denied).
 - **Contact details:** the real details and old menus without WhatsApp/email/Facebook (allowed); a phone or WhatsApp number with letters, a bad email, an `http://` or `javascript:` Facebook link, a link with spaces, an unknown settings field (denied).
 - **Allowed saves stay under the 1,000-step limit** with both 18 and 150 dishes.
 - **The `admins` allow-list can't be changed from any app.** A stranger can't add, change or delete an `admins` document (not even one for themselves), and neither can a signed-out visitor or the owner's own account. A signed-in account can only *check its own* entry (the admin page uses this to show "This account can't edit the menu"); it can't read anyone else's or list them.
@@ -260,6 +261,18 @@ The footer shows the phone, WhatsApp, email, address, opening hours, Google Maps
 **Or from a phone:** after steps 1–2, open the admin page → **More → Restaurant details**, type each value, clear the notice, and press **Save**.
 
 **Check on a phone:** **Call** opens the dialler with +94 70 270 1009, **WhatsApp** opens a chat with that number, **Email** opens the mail app addressed to hotwoknonagama@gmail.com, and **Facebook** and **Directions** open the right pages.
+
+## Adding the dish tag names to the live database
+
+The owner can rename the three dish tags (Spicy / Vegetarian / Chef's special) in **Restaurant details**. The live menu needs the default names stored once. Either way below changes nothing else (no dishes, sections or other details):
+
+1. **Push the new code**, then **publish the new rules** (Firestore Database → Rules → paste `firebase/firestore.rules` → **Publish**). Wait 1 minute. Without the new rules, the save is refused.
+2. Then **either**:
+   - **Easiest (phone):** open the admin page → **More → Restaurant details** → press **Save** without changing anything. The form already shows the default names, so Save stores them.
+   - **Or (computer):** in the project folder run `python -m http.server 8000` → open http://localhost:8000/firebase/setup.html → **step 2** sign in → **step 8: Add default tag names**. The log says **"PASS — tag names added: …"** (or "already has tag names" if they are there).
+3. Check: the customer menu still shows Spicy / Vegetarian / Chef's special under the search box.
+
+Until this is done the menu simply shows the default names, so nothing looks different in the meantime.
 
 ## Before going live (checklist)
 

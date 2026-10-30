@@ -58,6 +58,21 @@ export function createElement(tag, className, text) {
   return element;
 }
 
+// Names of the three dish tags. The owner can rename them (settings.tag_labels);
+// the icons and colours never change. Menus saved before renaming existed have
+// no tag_labels, so the default names are used.
+export const DEFAULT_TAG_LABELS = { spicy: 'Spicy', veg: 'Vegetarian', special: 'Chef\'s special' };
+
+export function tagLabels(settings) {
+  const saved = (settings && settings.tag_labels) || {};
+  const labels = {};
+  Object.keys(DEFAULT_TAG_LABELS).forEach((key) => {
+    const name = typeof saved[key] === 'string' ? saved[key].trim() : '';
+    labels[key] = name || DEFAULT_TAG_LABELS[key];
+  });
+  return labels;
+}
+
 // Remove everything inside an element. (Same as element.replaceChildren(),
 // which older phones — Chrome before 86, Safari before 14 — don't have.)
 export function clearElement(element) {

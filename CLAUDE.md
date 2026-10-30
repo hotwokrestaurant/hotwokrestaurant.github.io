@@ -48,13 +48,14 @@ The developer (Janana) is a **beginner** building this for free as a real client
 7. **Graceful failure.** If Firestore can't be reached, show the last cached menu (localStorage) with a small "showing saved menu" note; if nothing is cached, show a friendly error with the restaurant phone number.
 8. **Prices** are stored as whole-rupee integers (LKR) and displayed as `Rs. 1,250`.
 9. **Wrap all `localStorage` access in try/catch** — it can be unavailable.
-10. Do not change the menu data shape (`menu/published`: `settings` = 8 required keys plus optional `whatsapp`, `email`, `facebook_url` (spec 3.4), `categories` = **map of sections keyed by permanent id** `cat_…`, `items` with **`category_id`**, `updatedAt`; same shape as `firebase/menu-seed.json`) or the security rules without updating `docs/PROJECT_SPEC.md` and telling the developer. Code that reads sections must go through `sectionList()` / `dishInSection()` in `js/utils.js` (they also handle the old list format).
+10. Do not change the menu data shape (`menu/published`: `settings` = 8 required keys plus optional `whatsapp`, `email`, `facebook_url`, `tag_labels` (spec 3.4), `categories` = **map of sections keyed by permanent id** `cat_…`, `items` with **`category_id`**, `updatedAt`; same shape as `firebase/menu-seed.json`) or the security rules without updating `docs/PROJECT_SPEC.md` and telling the developer. Code that reads sections must go through `sectionList()` / `dishInSection()` in `js/utils.js` (they also handle the old list format).
 11. **Brand look (customer menu):** dark theme only, black/white plus the logo red as the single accent colour. See "Visual style" in `docs/PROJECT_SPEC.md`.
 12. **No `Co-Authored-By` lines** (or any other AI attribution) in suggested commit messages.
 13. **No photo uploads.** The admin page never handles images. Dish photos, if ever added, are put in `images/` by the developer; the `image` field stays optional.
 14. **Customer page = no Firebase SDK.** It reads `menu/published` with one REST `fetch()` per visit (measured ~4 s faster on Slow 3G than Firestore Lite). Don't add SDK imports to the customer page. On the admin page, keep the Firebase SDK version identical in every import URL.
 15. **Admin writes never overwrite the menu document.** Every change is a `runTransaction` that reads the latest menu and `tx.update`s only the changed field (`items`, `settings` or `categories`) plus `updatedAt`. Never `setDoc` from the admin page (see spec 4.3). The one exception to "one field": **deleting a section removes the section and its dishes in ONE transaction**, so no dish is ever left pointing to a missing section. **Undo** re-adds in safe, resumable steps (section hidden first → dishes 3 per save → original visibility), tracked in `localStorage` until finished.
 16. **Developer-only files are not published.** `_config.yml` excludes `firebase/`, `docs/`, `tools/`, `CLAUDE.md`, `README.md` from GitHub Pages. Never add `.nojekyll`. New developer-only folders must be added to that list.
+17. **Dish tags:** the three tags (spicy flame, vegetarian leaf, chef's-special star) have fixed icons and colours; only their names are owner-editable (`settings.tag_labels`). Always get the names through `tagLabels()` in `js/utils.js` (it falls back to the defaults); never hard-code "Spicy" etc. in the pages.
 
 ## Project structure
 
@@ -78,7 +79,7 @@ hotwokrestaurant.github.io/  ← repo root (the local folder may still be called
 ├── images/                  ← dish photos (.webp), icons, logo
 ├── firebase/firestore.rules ← security rules (pasted into the console)
 ├── firebase/menu-seed.json  ← starting menu data
-├── firebase/setup.html/.js/.css ← developer-only page: rule tests, load seed, restore backup, one-time sections upgrade, copy real restaurant details into live settings
+├── firebase/setup.html/.js/.css ← developer-only page: rule tests, load seed, restore backup, one-time sections upgrade, copy real restaurant details into live settings, add default dish tag names
 ├── firebase/README.md       ← click-by-click Firebase setup
 ├── tools/generate-qr.js     ← Node script to create the printable QR
 └── docs/PROJECT_SPEC.md     ← full specification

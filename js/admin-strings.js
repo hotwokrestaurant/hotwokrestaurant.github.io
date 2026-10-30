@@ -89,9 +89,6 @@ const STRINGS = {
     descriptionLabel: 'Short description',
     descriptionHint: 'Optional.',
     charactersLeft: '{count} letters left',
-    spicyLabel: 'Spicy',
-    vegLabel: 'Vegetarian',
-    featuredLabel: 'Chef\'s special',
     save: 'Save',
     saving: 'Saving…',
     cancel: 'Cancel',
@@ -106,6 +103,8 @@ const STRINGS = {
     // Restaurant details form
     detailsButton: 'Restaurant details',
     detailsTitle: 'Restaurant details',
+    taglineLabel: 'Line under the logo',
+    taglineHint: 'For example: Authentic Chinese & Sri Lankan favourites. Leave empty to show no line.',
     noticeLabel: 'Notice at the top of the menu',
     noticeHint: 'Optional. For example: Closed on Poya day.',
     hoursLabel: 'Opening hours',
@@ -125,6 +124,14 @@ const STRINGS = {
     mapHint: 'Optional. In Google Maps: Share → Copy link, then paste here.',
     errorMap: 'The link must start with https:// and have no spaces.',
     errorTooLong: 'This is too long (up to {max} letters).',
+    tagsTitle: 'Dish tags',
+    tagsIntro: 'The names shown next to the icons on the menu. The icons and colours stay the same.',
+    tagSpicyLabel: 'Red flame',
+    tagVegLabel: 'Green leaf',
+    tagVegHint: 'Customers may rely on this label. Make sure every dish with this tag really matches it.',
+    tagSpecialLabel: 'White star',
+    tagsReset: 'Reset to default names',
+    errorTagName: 'Please give each tag a name (up to {max} letters).',
 
     // Menu sections
     sectionsButton: 'Menu sections',

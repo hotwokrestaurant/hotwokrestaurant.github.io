@@ -391,6 +391,13 @@ a {
   margin-right: 6px;
 }
 
+/* Tag names are set by the owner (up to 20 letters): a long one wraps
+   inside its own entry instead of pushing the key off the screen. */
+.legend__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Sticky category tabs ---------- */
 .category-tabs {
   position: sticky;

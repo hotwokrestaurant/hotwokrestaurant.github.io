@@ -309,6 +309,31 @@ onClick('apply-details', async () => {
   }
 });
 
+// ---------- 8. Default dish tag names → live menu ----------
+// Adds settings.tag_labels only if it's missing, so names the owner has
+// already chosen are never overwritten. Everything else stays as it is.
+
+onClick('add-tag-labels', async () => {
+  if (!auth.currentUser) { log('Sign in as the owner first (step 2).'); return; }
+  const response = await fetch('menu-seed.json', { cache: 'no-store' });
+  if (!response.ok) throw new Error(`Could not load menu-seed.json (${response.status})`);
+  const defaults = (await response.json()).settings.tag_labels;
+  try {
+    const added = await runTransaction(db, async (transaction) => {
+      const snapshot = await transaction.get(menuRef);
+      if (!snapshot.exists()) throw new Error('there is no menu yet (step 3)');
+      const settings = snapshot.data().settings;
+      if (settings.tag_labels) return false;
+      transaction.update(menuRef, { settings: { ...settings, tag_labels: defaults }, updatedAt: serverTimestamp() });
+      return true;
+    });
+    if (added) log(`PASS — tag names added: ${JSON.stringify(defaults)}`, 'pass');
+    else log('PASS — the menu already has tag names; nothing changed.', 'pass');
+  } catch (error) {
+    log(`FAIL — tag names not added. ${describeError(error)} (Are the latest rules published?)`, 'fail');
+  }
+});
+
 // ---------- 6. One-time upgrade: menu sections with ids ----------
 // Old format → current format, in steps the new rules accept. Each step is a
 // transaction on the LATEST menu, so it's safe even if the owner edits at the

@@ -67,7 +67,7 @@ The document is about 5 KB with 18 dishes. Firestore's limit is 1 MiB, so size i
 | `spicy` | boolean | |
 | `veg` | boolean | |
 | `available` | boolean | `false` = sold out today (hidden, or faded if `show_sold_out`) |
-| `featured` | boolean | Shows the "Chef's special" icon |
+| `featured` | boolean | Shows the white star tag (default name "Chef's special") |
 | `image` | string | Optional. Simple file name in the repo's `images/` folder, e.g. `chicken-kottu.webp`; `''` = no photo. **Set by the developer only; the admin page never handles images.** |
 | `sort_order` | integer | 0–10,000. Lower shows first within its category |
 
@@ -98,7 +98,7 @@ Deleting a section also deletes all its dishes, in **one** save, so no dish is e
 | key | type, limit | value |
 |---|---|---|
 | `restaurant_name` | string, 1–60 | Hot Wok Restaurant |
-| `tagline` | string, ≤ 80 | Authentic Chinese & Sri Lankan favourites |
+| `tagline` | string, ≤ 60 (`''` = no line under the logo) | Authentic Chinese & Sri Lankan favourites |
 | `phone` | string, ≤ 30, digits, `+` and spaces only | +94 70 270 1009 |
 | `whatsapp` | *optional*, string, ≤ 30, digits, `+` and spaces only | +94 70 270 1009 |
 | `email` | *optional*, string, `''` or a simple `name@domain.tld` | hotwoknonagama@gmail.com |
@@ -107,9 +107,12 @@ Deleting a section also deletes all its dishes, in **one** save, so no dish is e
 | `map_url` | string, ≤ 300, `''` or `https://…` (no spaces) | https://maps.app.goo.gl/GUqyknrxPBy4MXMQ8 |
 | `facebook_url` | *optional*, string, ≤ 300, `''` or `https://…` (no spaces) | https://www.facebook.com/p/Hot-Wok-Restaurant-100068238776368/ |
 | `notice` | string, ≤ 120 | `''`. Optional banner text, e.g. "Closed on Poya day" |
+| `tag_labels` | *optional* map: exactly `spicy`, `veg`, `special`, each a string of 1–20 characters (one line) | { spicy: "Spicy", veg: "Vegetarian", special: "Chef's special" } |
 | `show_sold_out` | boolean | `false` (`true` = show sold-out items faded instead of hiding them) |
 
-The eight original keys must always be present (use `''` for "none"). `whatsapp`, `email` and `facebook_url` are optional, so menus saved before they existed stay valid; the admin page always saves all eleven. An empty value hides that button on the customer page. The WhatsApp button links to `https://wa.me/<digits only>`.
+**Dish tag names:** the three tags keep fixed icons and colours (red flame = `spicy`, green leaf = `veg`, white star = `featured` on a dish); only their names come from `tag_labels`. Without `tag_labels` (menus saved before this feature) the default names are used (`tagLabels()` in `js/utils.js`, used by both pages).
+
+The eight original keys must always be present (use `''` for "none"). `whatsapp`, `email`, `facebook_url` and `tag_labels` are optional, so menus saved before they existed stay valid; the admin page always saves all twelve. An empty value hides that button on the customer page. The WhatsApp button links to `https://wa.me/<digits only>`.
 
 ### 3.5 The owner allow-list: `admins/{uid}`
 
@@ -228,7 +231,8 @@ await runTransaction(db, async (tx) => {
 - **`admins` is write-locked for every app** (`allow list, write: if false`). A signed-in account can only `get` its own entry (`request.auth.uid == uid`), which the admin page uses after login. Only the Firebase console can change it, so an account created through the Auth API can't add itself. Public sign-up is also turned off in Authentication → Settings → User actions, where the console offers it.
 - No deletes of the menu document. Everything not matched is denied.
 - **Settings checks:** phone and WhatsApp only digits, `+` and spaces (≤ 30); email empty or a simple `name@domain.tld`; map and Facebook links empty or `https://` with no spaces (≤ 300); the optional keys are checked only when present. Each is one pattern, so "settings + 3 dishes" still fits under 1,000 steps.
-- Tested in the Firestore emulator (110 checks, all passing, including the `admins` lockdown, own-entry reads, simultaneous transactions, sections, deleting sections with 0/1/5/20 dishes and undoing them, the one-time upgrade, and the contact fields) plus the 25-section/150-dish step-limit test (23 kinds of save) before handover; manual tests are in `firebase/README.md`.
+- **Tag names:** `tag_labels` (when present) must have exactly 3 entries and each of `spicy`, `veg`, `special` must be 1–20 characters on one line (size check + one pattern each). The tagline is 0–60 characters. "Settings + 3 dishes" still fits under 1,000 steps with 25 sections and 150 dishes.
+- Tested in the Firestore emulator (124 checks, all passing, including the `admins` lockdown, own-entry reads, simultaneous transactions, sections, deleting sections with 0/1/5/20 dishes and undoing them, the one-time upgrade, the contact fields, and tag names/tagline) plus the 25-section/150-dish step-limit test (23 kinds of save) before handover; manual tests are in `firebase/README.md`.
 
 ### 4.5 Owner authentication
 - Email/password. The owner's account is created by hand in the console. **No sign-up flow** in the app (and "Enable create (sign-up)" is turned off in the console where available).
@@ -260,7 +264,7 @@ During the switch-over:
 - **The admin page shows "The menu needs a one-time update"** until the upgrade is done.
 - **The new rules accept the upgrade steps:** unchanged old-format dishes aren't re-checked, and every converted dish must point to an existing section.
 
-**Real restaurant details:** `firebase/setup.html` step 7 copies `phone`, `whatsapp`, `email`, `address`, `opening_hours`, `map_url` and `facebook_url` from `menu-seed.json` into the live `settings` in one transaction (`tx.update` of `settings` only). It also clears the old "Sample menu – prices are placeholders" notice. Dishes and sections are untouched. The owner can also type them in **Restaurant details**. The fallback phone for the error screen is `FALLBACK_PHONE` in `js/config.js` (+94 70 270 1009).
+**Real restaurant details:** `firebase/setup.html` step 7 copies `phone`, `whatsapp`, `email`, `address`, `opening_hours`, `map_url` and `facebook_url` from `menu-seed.json` into the live `settings` in one transaction (`tx.update` of `settings` only). It also clears the old "Sample menu – prices are placeholders" notice. Dishes and sections are untouched. The owner can also type them in **Restaurant details**. **Dish tag names:** `firebase/setup.html` step 8 adds the default `tag_labels` from `menu-seed.json` to the live `settings`, only if they are missing (it never overwrites names the owner chose). Pressing **Save** once in Restaurant details does the same. The fallback phone for the error screen is `FALLBACK_PHONE` in `js/config.js` (+94 70 270 1009).
 
 Tested on the emulator: the customer menu was identical before and after, the result equals `menu-seed.json`, and running it twice was harmless.
 
@@ -273,7 +277,7 @@ Tested on the emulator: the customer menu was identical before and after, the re
 
 ### Layout (top to bottom)
 1. **Header:** logo image (`images/logo.webp`, the wordmark cropped from the original `images/logo.jpg`, shown 232px wide) as the page title, optional tagline and notice line.
-2. **Search box** — slim input with a search icon; filters by item name/description live; shows "No dishes found". Scrolls away with the header. Below it, a small icon key (Spicy / Vegetarian / Chef's special).
+2. **Search box** — slim input with a search icon; filters by item name/description live; shows "No dishes found". Scrolls away with the header. Below it, a small icon key with the owner's tag names (default Spicy / Vegetarian / Chef's special). It lists only tags that at least one dish on the menu uses (dishes in hidden sections, or sold-out dishes that are hidden, don't count), and disappears if none do. Long names wrap inside their own entry (`overflow-wrap: anywhere`). Each dish icon also has a hidden screen-reader label with the same name.
 3. **Sticky category tabs** (horizontal scroll, plain uppercase text, active tab = white text + 2px red underline). Tapping scrolls to the section; the active tab highlights while scrolling (IntersectionObserver) and scrolls into view.
 4. **Sections per category** as a printed-menu style list (no cards):
    - Name on the left, a fine dotted leader, and price (`Rs. 1,200`) right-aligned on the same line. The leader shrinks to nothing for long names; the price never wraps.
@@ -332,8 +336,8 @@ Files: `admin.html`, `css/admin.css`, `js/admin.js` (screens and UI), `js/admin-
    - Each row: name; price ("Rs. 950 · Large Rs. 1,300"); an **"Available today" ON/OFF switch** that saves at once ("Chicken Kottu is hidden from the menu" / "…is back on the menu"); **Edit**.
    - Bottom ("More"): **Restaurant details**, **Download backup**, **View customer menu**.
    - Other phones' changes appear live (the page listens for menu changes).
-4. **Dish form** (full-screen; the phone's Back button closes it): name (≤ 60), category, price, large price (optional), description (≤ 150, live "letters left" counter), Spicy / Vegetarian / Chef's special. Prices accept "1,250". **Save** / **Cancel** stay visible at the bottom. On edit, red **Delete this dish** with a confirmation naming the dish. **No photo field.**
-5. **Restaurant details form:** notice, opening hours, phone, WhatsApp, email, address, Google Maps link, Facebook link. It checks the same rules as `firestore.rules`, with plain messages: phone/WhatsApp only numbers, spaces and +; email like name@gmail.com; links start with `https://` and have no spaces. Other settings (name, tagline, show sold out) are kept unchanged.
+4. **Dish form** (full-screen; the phone's Back button closes it): name (≤ 60), category, price, large price (optional), description (≤ 150, live "letters left" counter), the three tag checkboxes, each with its icon and the owner's tag name. Prices accept "1,250". **Save** / **Cancel** stay visible at the bottom. On edit, red **Delete this dish** with a confirmation naming the dish. **No photo field.**
+5. **Restaurant details form:** line under the logo (tagline, ≤ 60, live "letters left" counter; empty = no line on the menu), notice, opening hours, phone, WhatsApp, email, address, Google Maps link, Facebook link. It checks the same rules as `firestore.rules`, with plain messages: phone/WhatsApp only numbers, spaces and +; email like name@gmail.com; links start with `https://` and have no spaces. Then a **Dish tags** part: three name fields (≤ 20 each), each labelled with its icon (Red flame / Green leaf / White star); under the leaf, the hint "Customers may rely on this label. Make sure every dish with this tag really matches it."; and **Reset to default names** (fills in the defaults; Save stores them). Every save stores all three names. Other settings (restaurant name, show sold out) are kept unchanged.
 6. **Menu sections** (main screen → More → Menu sections): sections in menu order. Each row shows the name and dish count ("5 dishes", "Hidden"), a big **"Shown on menu" ON/OFF switch**, ↑ ↓ arrows (the tab order on the customer menu), **Rename** and **Delete** (red outline).
    - **+ Add a section** / **Rename** open a small form: name up to 30 letters; duplicates are refused, ignoring capitals ("There is already a section called "Kottu"").
    - **Delete** an empty section: simple confirmation naming it. A section **with dishes** opens a full-screen dialog:

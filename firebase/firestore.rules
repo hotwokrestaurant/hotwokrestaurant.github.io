@@ -46,8 +46,8 @@ service cloud.firestore {
 
     // ---------- Settings (checked only when changed) ----------
 
-    // 8 required fields + up to 3 optional contact fields (whatsapp, email,
-    // facebook_url; older menus don't have them). Each one is checked, and
+    // 8 required fields + up to 4 optional ones (whatsapp, email, facebook_url,
+    // tag_labels; older menus don't have them). Each one is checked, and
     // the field count must match exactly, so no unknown field can sneak in.
     function validSettings(s) {
       // Text is checked with one pattern each: .{1,60} = 1 to 60 characters
@@ -56,8 +56,15 @@ service cloud.firestore {
              + ('whatsapp' in s ? 1 : 0)
              + ('email' in s ? 1 : 0)
              + ('facebook_url' in s ? 1 : 0)
+             + ('tag_labels' in s ? 1 : 0)
         && s.restaurant_name.matches('.{1,60}')
-        && s.tagline.matches('.{0,80}')
+        && s.tagline.matches('.{0,60}')
+        // Dish tag names: exactly spicy, veg and special, each 1–20 characters.
+        // (size 3 + reading all three names = no missing or extra names.)
+        && (!('tag_labels' in s) || (s.tag_labels.size() == 3
+              && s.tag_labels.spicy.matches('.{1,20}')
+              && s.tag_labels.veg.matches('.{1,20}')
+              && s.tag_labels.special.matches('.{1,20}')))
         // Phone numbers: digits, + and spaces only (or empty).
         && s.phone.matches('[0-9+ ]{0,30}')
         && s.address.matches('(?s).{0,150}')

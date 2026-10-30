@@ -13,7 +13,8 @@ import {
   saveItems, saveSettings, saveSections, saveSectionsAndItems, GoneError, BlockedError
 } from './admin-firebase.js';
 import {
-  formatPrice, toBool, normalizeText, createElement, clearElement, sectionList, storageGet, storageSet
+  formatPrice, toBool, normalizeText, createElement, clearElement, sectionList, storageGet, storageSet,
+  DEFAULT_TAG_LABELS, tagLabels
 } from './utils.js';
 
 // Same limits as firebase/firestore.rules (the rules are the real check).
@@ -22,6 +23,8 @@ const LIMITS = {
   description: 150,
   sectionName: 30,
   sections: 25,
+  tagline: 60,
+  tagName: 20,
   notice: 120,
   hours: 150,
   phone: 30,
@@ -593,6 +596,11 @@ function openDishForm(id, returnFocusTo) {
   $('dish-spicy').checked = item ? toBool(item.spicy) : false;
   $('dish-veg').checked = item ? toBool(item.veg) : false;
   $('dish-featured').checked = item ? toBool(item.featured) : false;
+  // The owner's own tag names next to the checkboxes.
+  const labels = tagLabels(state.menu.settings);
+  $('dish-spicy-label').textContent = labels.spicy;
+  $('dish-veg-label').textContent = labels.veg;
+  $('dish-featured-label').textContent = labels.special;
   $('dish-delete').hidden = !item;
   updateDescriptionCount();
   showFormError('dish-error', '');
@@ -1045,8 +1053,22 @@ function setupSections() {
 
 // ---------- Restaurant details ----------
 
+function updateTaglineCount() {
+  const left = LIMITS.tagline - $('set-tagline').value.length;
+  $('set-tagline-count').textContent = t('charactersLeft', { count: left });
+}
+
+function fillTagFields(labels) {
+  $('set-tag-spicy').value = labels.spicy;
+  $('set-tag-veg').value = labels.veg;
+  $('set-tag-special').value = labels.special;
+}
+
 function openDetailsForm(returnFocusTo) {
   const settings = state.menu.settings || {};
+  $('set-tagline').value = settings.tagline || '';
+  updateTaglineCount();
+  fillTagFields(tagLabels(settings));
   $('set-notice').value = settings.notice || '';
   $('set-hours').value = settings.opening_hours || '';
   $('set-phone').value = settings.phone || '';
@@ -1056,7 +1078,7 @@ function openDetailsForm(returnFocusTo) {
   $('set-map').value = settings.map_url || '';
   $('set-facebook').value = settings.facebook_url || '';
   showFormError('details-error', '');
-  openSheet('screen-details', $('set-notice'), returnFocusTo);
+  openSheet('screen-details', $('set-tagline'), returnFocusTo);
 }
 
 // Same checks as firebase/firestore.rules (the rules are the real check).
@@ -1067,6 +1089,7 @@ const LINK_PATTERN = /^https:\/\/\S+$/;
 async function saveDetailsForm(event) {
   event.preventDefault();
   const values = {
+    tagline: $('set-tagline').value.trim(),
     notice: $('set-notice').value.trim(),
     opening_hours: $('set-hours').value.trim(),
     phone: $('set-phone').value.trim(),
@@ -1076,7 +1099,13 @@ async function saveDetailsForm(event) {
     map_url: $('set-map').value.trim(),
     facebook_url: $('set-facebook').value.trim()
   };
+  const tags = {
+    spicy: $('set-tag-spicy').value.trim(),
+    veg: $('set-tag-veg').value.trim(),
+    special: $('set-tag-special').value.trim()
+  };
   const limits = {
+    tagline: LIMITS.tagline,
     notice: LIMITS.notice,
     opening_hours: LIMITS.hours,
     phone: LIMITS.phone,
@@ -1094,6 +1123,7 @@ async function saveDetailsForm(event) {
   else if (values.email && !EMAIL_PATTERN.test(values.email)) error = t('errorEmail');
   else if (values.map_url && !LINK_PATTERN.test(values.map_url)) error = t('errorMap');
   else if (values.facebook_url && !LINK_PATTERN.test(values.facebook_url)) error = t('errorFacebook');
+  else if (Object.keys(tags).some((key) => !tags[key] || tags[key].length > LIMITS.tagName)) error = t('errorTagName', { max: LIMITS.tagName });
   showFormError('details-error', error);
   if (error) return;
   if (!navigator.onLine) { showFormError('details-error', t('saveOffline')); return; }
@@ -1101,8 +1131,8 @@ async function saveDetailsForm(event) {
   const button = $('details-save');
   setBusy(button, true);
   try {
-    // Only these details change; name, tagline etc. are kept as they are.
-    await saveSettings((settings) => ({ ...settings, ...values }));
+    // Only these details change; the name and "show sold out" are kept as they are.
+    await saveSettings((settings) => ({ ...settings, ...values, tag_labels: tags }));
     closeTopSheet();
     showToast(t('detailsSaved'));
   } catch (saveError) {
@@ -1143,6 +1173,12 @@ function setupForms() {
 
   $('details-form').addEventListener('submit', saveDetailsForm);
   $('details-cancel').addEventListener('click', closeTopSheet);
+  $('set-tagline').addEventListener('input', updateTaglineCount);
+  // Puts the default names back in the fields; Save stores them.
+  $('tags-reset').addEventListener('click', () => {
+    fillTagFields(DEFAULT_TAG_LABELS);
+    $('set-tag-spicy').focus();
+  });
   $('open-details').addEventListener('click', (event) => openDetailsForm(event.currentTarget));
   $('download-backup').addEventListener('click', downloadBackup);
 

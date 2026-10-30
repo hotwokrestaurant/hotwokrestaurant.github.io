@@ -136,6 +136,53 @@ select.form__input {
   accent-color: var(--color-red);
 }
 
+/* Tag icon (flame / leaf / star) before the tag name. */
+.check__icon {
+  width: 20px;
+  height: 20px;
+  margin-right: var(--space-2);
+}
+
+.check span {
+  min-width: 0;
+  overflow-wrap: anywhere;           /* long owner-chosen tag names wrap */
+}
+
+/* A titled part of a form, e.g. "Dish tags" in Restaurant details. */
+.form__group {
+  min-width: 0;                      /* fieldsets don't shrink on narrow phones otherwise */
+  margin: var(--space-6) 0 0;
+  padding: var(--space-4) 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+}
+
+/* float + full width: the title sits BELOW the group's top line, instead of
+   cutting into it (the way browsers draw a fieldset's legend by default). */
+.form__group-title {
+  float: left;
+  width: 100%;
+  padding: 0;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.form__group-title + * {
+  clear: both;
+}
+
+/* Field label with the tag's icon in front, so the owner sees which tag it is. */
+.form__label--icon {
+  display: flex;
+  align-items: center;
+}
+
+.form__label--icon .icon {
+  width: 20px;
+  height: 20px;
+  margin-right: var(--space-2);
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   display: flex;

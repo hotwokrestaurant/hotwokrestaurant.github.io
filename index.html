@@ -96,16 +96,17 @@
              placeholder="Search dishes" autocomplete="off" enterkeyhint="search">
     </div>
 
-    <!-- Key for the small icons next to dish names, like on a printed menu. -->
-    <ul class="legend" aria-label="Icon key">
-      <li class="legend__item">
-        <svg class="icon icon--spicy" aria-hidden="true" focusable="false"><use href="#icon-flame"/></svg>Spicy
+    <!-- Key for the small icons next to dish names, like on a printed menu.
+         js/menu.js puts in the owner's tag names and hides tags no dish uses. -->
+    <ul id="legend" class="legend" aria-label="Icon key">
+      <li class="legend__item" data-tag="spicy">
+        <svg class="icon icon--spicy" aria-hidden="true" focusable="false"><use href="#icon-flame"/></svg><span class="legend__label">Spicy</span>
       </li>
-      <li class="legend__item">
-        <svg class="icon icon--veg" aria-hidden="true" focusable="false"><use href="#icon-leaf"/></svg>Vegetarian
+      <li class="legend__item" data-tag="veg">
+        <svg class="icon icon--veg" aria-hidden="true" focusable="false"><use href="#icon-leaf"/></svg><span class="legend__label">Vegetarian</span>
       </li>
-      <li class="legend__item">
-        <svg class="icon icon--featured" aria-hidden="true" focusable="false"><use href="#icon-star"/></svg>Chef's special
+      <li class="legend__item" data-tag="special">
+        <svg class="icon icon--featured" aria-hidden="true" focusable="false"><use href="#icon-star"/></svg><span class="legend__label">Chef's special</span>
       </li>
     </ul>
   </header>

@@ -10,7 +10,12 @@
     "map_url": "https://maps.app.goo.gl/GUqyknrxPBy4MXMQ8",
     "facebook_url": "https://www.facebook.com/p/Hot-Wok-Restaurant-100068238776368/",
     "notice": "",
-    "show_sold_out": false
+    "show_sold_out": false,
+    "tag_labels": {
+      "spicy": "Spicy",
+      "veg": "Vegetarian",
+      "special": "Chef's special"
+    }
   },
   "categories": {
     "cat_friedrice": {
