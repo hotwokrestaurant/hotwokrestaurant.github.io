@@ -85,7 +85,8 @@
     <h1 class="site-header__logo">
       <img id="logo" src="images/logo.webp" alt="Hot Wok Restaurant" width="464" height="180" fetchpriority="high">
     </h1>
-    <p id="tagline" class="site-header__tagline line-frame" hidden></p>
+    <!-- Not hidden while loading, so its line of space is kept and nothing below jumps. -->
+    <p id="tagline" class="site-header__tagline line-frame"></p>
     <p id="notice" class="notice" hidden></p>
 
     <div class="search">
@@ -118,13 +119,17 @@
     <!-- Shown only when the latest menu couldn't be loaded and a saved copy is displayed -->
     <p id="status-note" class="status-note" role="status" hidden></p>
 
-    <!-- Skeleton loader: faint placeholder rows shown until the menu is ready -->
+    <!-- Skeleton loader: a faint heading and dish-shaped rows, about the size of
+         the real first section, shown until the menu is ready. -->
     <div id="menu-sections">
       <div class="skeleton" aria-hidden="true">
         <div class="skeleton__title"></div>
-        <div class="skeleton__row"></div>
-        <div class="skeleton__row"></div>
-        <div class="skeleton__row"></div>
+        <div class="skeleton__dish"><div class="skeleton__line skeleton__line--name"></div><div class="skeleton__line"></div><div class="skeleton__line skeleton__line--short"></div></div>
+        <div class="skeleton__dish"><div class="skeleton__line skeleton__line--name"></div><div class="skeleton__line"></div><div class="skeleton__line skeleton__line--short"></div></div>
+        <div class="skeleton__dish"><div class="skeleton__line skeleton__line--name"></div><div class="skeleton__line"></div><div class="skeleton__line skeleton__line--short"></div></div>
+        <div class="skeleton__dish"><div class="skeleton__line skeleton__line--name"></div><div class="skeleton__line"></div><div class="skeleton__line skeleton__line--short"></div></div>
+        <div class="skeleton__dish"><div class="skeleton__line skeleton__line--name"></div><div class="skeleton__line"></div><div class="skeleton__line skeleton__line--short"></div></div>
+        <div class="skeleton__dish"><div class="skeleton__line skeleton__line--name"></div><div class="skeleton__line"></div><div class="skeleton__line skeleton__line--short"></div></div>
       </div>
       <p class="visually-hidden">Loading menu…</p>
     </div>

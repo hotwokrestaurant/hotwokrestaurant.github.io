@@ -292,7 +292,11 @@ Tested on the emulator: the customer menu was identical before and after, the re
 6. **Back-to-top** button after scrolling (small dark circle, white arrow).
 
 ### Behaviour
-- Show a **skeleton loader** while fetching.
+- Show a **skeleton loader** while fetching. **Nothing may jump when the menu arrives** (target: layout shift / CLS under 0.1):
+  - The skeleton looks like the real first section (centred heading bar, dish-shaped rows with the same padding and dividers) and is at least one screen tall.
+  - The empty tagline keeps one line of space, and the tab bar keeps its 48 px height while empty, so the search box and tabs don't move.
+  - The footer is hidden while `#menu` has `aria-busy="true"` (CSS only). It appears below the menu, or below the error message.
+  - Measured with live data (headless Chrome, normal and Slow 3G): first and repeat visits at 360px, 412px and 1280px give CLS 0.000–0.001 (was 0.53–0.83). Expected small shifts that can't be reserved in advance: an owner notice appearing on a first visit (0.03), and a tagline that wraps to two lines at 200% text size (0.04).
 - Save the last successful menu to `localStorage`; render cached data instantly on next visit, then refresh in the background.
 - On failure with no cache → friendly error + call button.
 - Must work without photos.

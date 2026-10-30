@@ -277,6 +277,17 @@ a {
   text-wrap: balance;                /* if it wraps at 360px, both lines are similar length */
 }
 
+/* While the menu loads the tagline is still empty: keep one line of space for
+   it (so the search box doesn't jump down later), without the framing lines. */
+.site-header__tagline:empty {
+  min-height: 1.4em;
+}
+
+.site-header__tagline:empty::before,
+.site-header__tagline:empty::after {
+  visibility: hidden;
+}
+
 /* ---------- Thin framing lines ("—— text ——"), like beside "Restaurant" in the logo ---------- */
 .line-frame {
   display: flex;
@@ -392,6 +403,7 @@ a {
 .category-tabs__list {
   position: relative;                /* so tab.offsetLeft is measured from the strip */
   display: flex;
+  min-height: 48px;                  /* same as a tab: keeps the bar's height while the tabs load */
   max-width: var(--content-width);
   margin: 0 auto;
   padding: 0 var(--space-1);
@@ -769,13 +781,17 @@ a {
   text-transform: uppercase;
 }
 
-/* ---------- Skeleton loader ---------- */
+/* ---------- Skeleton loader ----------
+   Shaped and spaced like the real first section (heading, then dishes with the
+   same padding and divider), and at least one screen tall, so the menu drops
+   into the same space. The footer stays hidden while loading (see .site-footer). */
 .skeleton {
+  min-height: 100vh;
   padding-top: var(--space-6);
 }
 
 .skeleton__title,
-.skeleton__row {
+.skeleton__line {
   background: var(--color-skeleton);
   border-radius: var(--radius);
   animation: skeleton-pulse 1.2s ease-in-out infinite;
@@ -783,13 +799,29 @@ a {
 
 .skeleton__title {
   width: 40%;
-  height: 22px;
-  margin-bottom: var(--space-5);
+  height: 26px;                      /* the heading's line height */
+  margin: 0 auto var(--space-2);
 }
 
-.skeleton__row {
-  height: 48px;
-  margin-bottom: var(--space-5);
+.skeleton__dish {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.skeleton__line {
+  width: 80%;
+  height: 14px;
+  margin-top: var(--space-3);
+}
+
+.skeleton__line--name {
+  width: 55%;
+  height: 18px;
+  margin-top: 0;
+}
+
+.skeleton__line--short {
+  width: 60%;
 }
 
 @keyframes skeleton-pulse {
@@ -805,6 +837,13 @@ a {
   padding: var(--space-6) var(--space-4) var(--space-7);
   border-top: 1px solid var(--color-line);
   text-align: center;
+}
+
+/* Hidden while the menu loads (js/menu.js sets aria-busy="false" when the menu
+   or the error message is shown). Otherwise it would sit just under the short
+   loading placeholder and then be pushed down the page: a big jump. */
+.menu[aria-busy='true'] ~ .site-footer {
+  display: none;
 }
 
 /* Hairline + small line-art flame + hairline, like the section dividers. */
